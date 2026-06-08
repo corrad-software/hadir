@@ -1,21 +1,21 @@
 import type { Component } from "vue";
 import {
   BookOpen,
-  Bot,
+  Building2,
   Cable,
-  Cog,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
   Database,
   Eye,
-  FileText,
   Gauge,
-  Image,
   LayoutGrid,
-  Link2,
   ListChecks,
-  Mail,
-  Menu,
+  Map,
   Settings,
   Shield,
+  SlidersHorizontal,
+  Users,
 } from "lucide-vue-next";
 
 export type MenuNode = {
@@ -27,12 +27,14 @@ export type MenuNode = {
 
 export type MenuItemDef = MenuNode & {
   icon: Component;
+  roles?: string[];
 };
 
 export type MenuGroupDef = {
   id: string;
   label: string;
   items: MenuItemDef[];
+  roles?: string[];
 };
 
 export type AdminMenuPrefs = {
@@ -55,132 +57,80 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
     ],
   },
   {
-    id: "portal",
-    label: "Webfront",
+    id: "attendance",
+    label: "Attendance",
     items: [
-      { id: "dashboard", label: "Dashboard", to: "/admin/portal/dashboard", icon: Gauge },
       {
-        id: "posts",
-        label: "Posts",
-        to: "/admin/posts",
-        icon: FileText,
+        id: "attendance-my",
+        label: "My Attendance",
+        icon: Clock,
+        to: "/admin/attendance/checkin",
         children: [
-          { id: "posts-all", label: "All Posts", to: "/admin/posts" },
-          { id: "posts-new", label: "Add New", to: "/admin/posts/new" },
-          { id: "posts-categories", label: "Categories", to: "/admin/categories" },
+          { id: "attendance-checkin", label: "Check In / Out", to: "/admin/attendance/checkin" },
+          { id: "attendance-my-history", label: "My History", to: "/admin/attendance/my-history" },
         ],
       },
       {
-        id: "pages",
-        label: "Pages",
-        to: "/admin/pages",
-        icon: FileText,
-        children: [
-          { id: "pages-all", label: "All Pages", to: "/admin/pages" },
-          { id: "pages-new", label: "Add New", to: "/admin/pages/new" },
-        ],
+        id: "attendance-approvals",
+        label: "Approvals",
+        icon: ClipboardList,
+        to: "/admin/attendance/approvals",
+        roles: ["admin", "hr_admin", "supervisor"],
       },
       {
-        id: "media",
-        label: "Media",
-        to: "/admin/media",
-        icon: Image,
-        children: [{ id: "media-library", label: "Library", to: "/admin/media" }],
+        id: "attendance-corrections",
+        label: "Corrections",
+        icon: ClipboardCheck,
+        to: "/admin/attendance/corrections",
       },
-      { id: "storefront-menu", label: "Menus", to: "/admin/webfront-menu", icon: Link2 },
-      { id: "webfront-settings", label: "Settings", to: "/admin/webfront-settings", icon: Settings },
+      {
+        id: "attendance-team-map",
+        label: "Team Map",
+        icon: Map,
+        to: "/admin/attendance/team-map",
+      },
+      {
+        id: "attendance-management",
+        label: "Management",
+        icon: ListChecks,
+        to: "/admin/attendance/records",
+        roles: ["admin", "hr_admin"],
+        children: [
+          { id: "attendance-records", label: "All Records", to: "/admin/attendance/records" },
+          { id: "attendance-report", label: "Reports", to: "/admin/attendance/report" },
+        ],
+      },
     ],
   },
   {
-    id: "core-platform",
-    label: "Core Platform",
+    id: "human-resources",
+    label: "Human Resources",
     items: [
       {
-        id: "identity-access",
-        label: "Identity & Access",
-        to: "/admin/platform/identity",
-        icon: Shield,
-        children: [
-          { id: "platform-auth", label: "Authentication", to: "/admin/platform/identity/users",
-            children: [
-              { id: "platform-users-all", label: "All Users", to: "/admin/platform/identity/users" },
-              { id: "platform-users-new", label: "Add User", to: "/admin/platform/identity/users/new" },
-            ],
-          },
-          { id: "platform-rbac", label: "RBAC", to: "/admin/platform/identity/roles" },
-          { id: "platform-tokens", label: "Token Management", to: "/admin/platform/identity/tokens" },
-        ],
+        id: "hr-staff",
+        label: "Employees",
+        icon: Users,
+        to: "/admin/hr/staff",
+        roles: ["admin", "hr_admin"],
       },
       {
-        id: "observability",
-        label: "Observability",
-        to: "/admin/platform/observability",
-        icon: Eye,
-        children: [
-          { id: "platform-audit-trail", label: "Audit Trail", to: "/admin/platform/observability/audit-trail" },
-          { id: "platform-activity-log", label: "Activity Log", to: "/admin/platform/observability/activity-log" },
-          { id: "platform-logging", label: "Logging", to: "/admin/platform/observability/logging" },
-          { id: "platform-error-tracking", label: "Error Tracking", to: "/admin/platform/observability/errors" },
-          { id: "platform-monitoring", label: "Monitoring", to: "/admin/platform/observability/monitoring" },
-        ],
+        id: "hr-divisions",
+        label: "Divisions",
+        icon: Building2,
+        to: "/admin/hr/divisions",
+        roles: ["admin", "hr_admin"],
       },
       {
-        id: "queue",
-        label: "Queue",
-        to: "/admin/platform/queue",
-        icon: ListChecks,
+        id: "hr-configuration",
+        label: "Configuration",
+        icon: SlidersHorizontal,
+        to: "/admin/hr/configuration/job-statuses",
+        roles: ["admin", "hr_admin"],
         children: [
-          { id: "platform-queue-dashboard", label: "Dashboard", to: "/admin/platform/queue" },
-          { id: "platform-queue-failed", label: "Failed Jobs", to: "/admin/platform/queue/failed" },
-          { id: "platform-queue-scheduled", label: "Scheduled Jobs", to: "/admin/platform/queue/scheduled" },
-        ],
-      },
-      {
-        id: "messaging",
-        label: "Messaging",
-        to: "/admin/platform/messaging",
-        icon: Mail,
-        children: [
-          { id: "platform-event-bus", label: "Event Bus", to: "/admin/platform/messaging/event-bus" },
-          { id: "platform-notifications", label: "Notifications", to: "/admin/platform/messaging/notifications" },
-        ],
-      },
-      {
-        id: "system-management",
-        label: "System Management",
-        to: "/admin/platform/system",
-        icon: Cog,
-        children: [
-          { id: "platform-scheduler", label: "Scheduler", to: "/admin/platform/system/scheduler" },
-          { id: "platform-config", label: "Configuration", to: "/admin/platform/system/configuration" },
-          { id: "platform-feature-flags", label: "Feature Flags", to: "/admin/platform/system/feature-flags" },
-          { id: "platform-file-media", label: "File / Media", to: "/admin/platform/storage/media" },
-        ],
-      },
-      {
-        id: "api-gateway",
-        label: "API Gateway",
-        to: "/admin/platform/gateway",
-        icon: Cable,
-        children: [
-          { id: "platform-gateway-routes", label: "Routes", to: "/admin/platform/gateway/routes" },
-          { id: "platform-gateway-upstreams", label: "Upstreams", to: "/admin/platform/gateway/upstreams" },
-          { id: "platform-gateway-consumers", label: "Consumers", to: "/admin/platform/gateway/consumers" },
-          { id: "platform-gateway-plugins", label: "Plugins", to: "/admin/platform/gateway/plugins" },
-          { id: "platform-gateway-ssl", label: "SSL Certificates", to: "/admin/platform/gateway/ssl" },
-          { id: "platform-webhooks", label: "Webhooks", to: "/admin/platform/gateway/webhooks" },
-        ],
-      },
-      {
-        id: "ai-integration",
-        label: "AI Integration",
-        to: "/admin/platform/ai",
-        icon: Bot,
-        children: [
-          { id: "platform-ai-providers", label: "AI Providers", to: "/admin/platform/ai/providers" },
-          { id: "platform-ai-models", label: "AI Models", to: "/admin/platform/ai/models" },
-          { id: "platform-ai-prompts", label: "Prompt Templates", to: "/admin/platform/ai/prompts" },
-          { id: "platform-ai-usage", label: "AI Usage & Billing", to: "/admin/platform/ai/usage" },
+          { id: "hr-job-statuses", label: "Job Statuses", to: "/admin/hr/configuration/job-statuses" },
+          { id: "hr-job-titles", label: "Job Titles", to: "/admin/hr/configuration/job-titles" },
+          { id: "hr-offices", label: "Office Locations", to: "/admin/attendance/offices" },
+          { id: "hr-work-policies", label: "Work Policies", to: "/admin/attendance/policies" },
         ],
       },
     ],
@@ -189,12 +139,37 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
     id: "administration",
     label: "Administration",
     items: [
-      { id: "menus", label: "Menus", to: "/admin/menus", icon: Menu },
+      {
+        id: "identity-access",
+        label: "Users & Roles",
+        to: "/admin/platform/identity/users",
+        icon: Shield,
+        roles: ["admin"],
+        children: [
+          { id: "platform-users", label: "Users", to: "/admin/platform/identity/users" },
+          { id: "platform-rbac", label: "Roles", to: "/admin/platform/identity/roles" },
+        ],
+      },
+      {
+        id: "observability",
+        label: "Audit Trail",
+        to: "/admin/platform/observability/audit-trail",
+        icon: Eye,
+        roles: ["admin"],
+      },
+      {
+        id: "queue",
+        label: "Queue Monitor",
+        to: "/admin/platform/queue",
+        icon: ListChecks,
+        roles: ["admin"],
+      },
       {
         id: "settings",
         label: "Settings",
         to: "/admin/settings",
         icon: Settings,
+        roles: ["admin"],
         children: [
           { id: "settings-general", label: "General", to: "/admin/settings" },
           { id: "settings-system", label: "System", to: "/admin/settings/system" },
@@ -205,6 +180,7 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
   {
     id: "development",
     label: "Development",
+    roles: ["admin", "hr_admin"],
     items: [
       { id: "developers-guide", label: "Developers Guide", to: "/admin/development/developers-guide", icon: BookOpen },
       { id: "database-schema", label: "Database Schema", to: "/admin/development/database-schema", icon: Database },

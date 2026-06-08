@@ -1,25 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
 import type { RouteLocationGeneric, RouteRecordRaw } from "vue-router";
 
-import DashboardView from "@/views/DashboardView.vue";
 import MainDashboardView from "@/views/MainDashboardView.vue";
 import KitchenChartsView from "@/views/KitchenChartsView.vue";
 import KitchenFormsView from "@/views/KitchenFormsView.vue";
 import LoginView from "@/views/LoginView.vue";
-import MediaLibraryView from "@/views/MediaLibraryView.vue";
 import KitchenSinkView from "@/views/KitchenSinkView.vue";
-import PageEditorView from "@/views/PageEditorView.vue";
-import PagesListView from "@/views/PagesListView.vue";
-import PostEditorView from "@/views/PostEditorView.vue";
-import PostsListView from "@/views/PostsListView.vue";
-import CategoriesListView from "@/views/CategoriesListView.vue";
-import CategoryEditorView from "@/views/CategoryEditorView.vue";
 import DatabaseSchemaView from "@/views/DatabaseSchemaView.vue";
 import DevelopersGuideView from "@/views/DevelopersGuideView.vue";
 import ApiManagementView from "@/views/ApiManagementView.vue";
 import MenusView from "@/views/MenusView.vue";
-import StorefrontMenuView from "@/views/StorefrontMenuView.vue";
-import WebfrontSettingsView from "@/views/WebfrontSettingsView.vue";
 import AuditLogsView from "@/views/AuditLogsView.vue";
 import QueueMonitorView from "@/views/QueueMonitorView.vue";
 import ComingSoonView from "@/views/ComingSoonView.vue";
@@ -28,43 +18,24 @@ import SettingsView from "@/views/SettingsView.vue";
 import SystemInfoView from "@/views/SystemInfoView.vue";
 import UsersView from "@/views/UsersView.vue";
 import UserEditView from "@/views/UserEditView.vue";
-import StorefrontHomeView from "@/views/StorefrontHomeView.vue";
-import StorefrontPageView from "@/views/StorefrontPageView.vue";
+import AttendanceCheckInView from "@/views/AttendanceCheckInView.vue";
+import AttendanceMyHistoryView from "@/views/AttendanceMyHistoryView.vue";
+import AttendancePolicyView from "@/views/AttendancePolicyView.vue";
+import AttendanceAllRecordsView from "@/views/AttendanceAllRecordsView.vue";
+import AttendanceReportView from "@/views/AttendanceReportView.vue";
+import AttendanceApprovalView from "@/views/AttendanceApprovalView.vue";
+import AttendanceCorrectionsView from "@/views/AttendanceCorrectionsView.vue";
+import TeamAttendanceMapView from "@/views/TeamAttendanceMapView.vue";
+import DivisionsView from "@/views/DivisionsView.vue";
+import JobStatusesView from "@/views/JobStatusesView.vue";
+import JobTitlesView from "@/views/JobTitlesView.vue";
+import StaffView from "@/views/StaffView.vue";
+import StaffEditorView from "@/views/StaffEditorView.vue";
+import OfficesView from "@/views/OfficesView.vue";
+import OfficeEditorView from "@/views/OfficeEditorView.vue";
+import AttendancePolicyEditorView from "@/views/AttendancePolicyEditorView.vue";
 import { useAuthStore } from "@/stores/auth";
 import { useSiteStore } from "@/stores/site";
-
-const legacyAdminPaths = [
-  "/login",
-  "/portal/dashboard",
-  "/posts",
-  "/posts/new",
-  "/posts/:id",
-  "/categories",
-  "/categories/new",
-  "/categories/:id",
-  "/pages",
-  "/pages/new",
-  "/pages/:id",
-  "/media",
-  "/menus",
-  "/webfront-menu",
-  "/webfront-settings",
-  "/storefront-menu",
-  "/kitchen-sink",
-  "/kitchen-sink/forms",
-  "/kitchen-sink/charts",
-  "/development/database-schema",
-  "/development/api-management",
-  "/profile",
-  "/settings",
-  "/settings/users",
-  "/settings/users/new",
-  "/settings/users/:id",
-  "/settings/roles",
-  "/settings/audit-logs",
-  "/settings/queue-monitor",
-  "/settings/system",
-];
 
 // Backward-compat redirects: old /admin/settings/* → new /admin/platform/* paths
 const settingsRedirects: RouteRecordRaw[] = [
@@ -79,29 +50,15 @@ const settingsRedirects: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: "/", redirect: "/admin/login" },
     { path: "/admin/login", name: "login", component: LoginView, meta: { guestOnly: true, title: "Login" } },
     { path: "/admin", name: "main-dashboard", component: MainDashboardView, meta: { requiresAuth: true, title: "Main Dashboard" } },
-    { path: "/admin/portal/dashboard", name: "dashboard", component: DashboardView, meta: { requiresAuth: true, title: "Dashboard" } },
-    { path: "/admin/posts", name: "posts", component: PostsListView, meta: { requiresAuth: true, title: "Posts" } },
-    { path: "/admin/posts/new", name: "post-create", component: PostEditorView, meta: { requiresAuth: true, title: "New Post" } },
-    { path: "/admin/posts/:id", name: "post-edit", component: PostEditorView, meta: { requiresAuth: true, title: "Edit Post" } },
-    { path: "/admin/categories", name: "categories", component: CategoriesListView, meta: { requiresAuth: true, title: "Categories" } },
-    { path: "/admin/categories/new", name: "category-create", component: CategoryEditorView, meta: { requiresAuth: true, title: "New Category" } },
-    { path: "/admin/categories/:id", name: "category-edit", component: CategoryEditorView, meta: { requiresAuth: true, title: "Edit Category" } },
-    { path: "/admin/pages", name: "pages", component: PagesListView, meta: { requiresAuth: true, title: "Pages" } },
-    { path: "/admin/pages/new", name: "page-create", component: PageEditorView, meta: { requiresAuth: true, title: "New Page" } },
-    { path: "/admin/pages/:id", name: "page-edit", component: PageEditorView, meta: { requiresAuth: true, title: "Edit Page" } },
-    { path: "/admin/media", name: "media", component: MediaLibraryView, meta: { requiresAuth: true, title: "Media" } },
-    { path: "/admin/webfront-menu", name: "storefront-menu", component: StorefrontMenuView, meta: { requiresAuth: true, title: "Menus" } },
-    { path: "/admin/storefront-menu", redirect: "/admin/webfront-menu" },
-    { path: "/admin/webfront-settings", name: "webfront-settings", component: WebfrontSettingsView, meta: { requiresAuth: true, title: "Settings" } },
-    { path: "/admin/menus", name: "menus", component: MenusView, meta: { requiresAuth: true, title: "Menus" } },
-    { path: "/admin/kitchen-sink", name: "kitchen-sink", component: KitchenSinkView, meta: { requiresAuth: true, title: "Kitchen Sink" } },
-    { path: "/admin/kitchen-sink/forms", name: "kitchen-forms", component: KitchenFormsView, meta: { requiresAuth: true, title: "Forms" } },
-    { path: "/admin/kitchen-sink/charts", name: "kitchen-charts", component: KitchenChartsView, meta: { requiresAuth: true, title: "Charts" } },
-    { path: "/admin/development/developers-guide", name: "developers-guide", component: DevelopersGuideView, meta: { requiresAuth: true, title: "Developers Guide" } },
-    { path: "/admin/development/database-schema", name: "database-schema", component: DatabaseSchemaView, meta: { requiresAuth: true, title: "Database Schema" } },
-    { path: "/admin/development/api-explorer", name: "api-explorer", component: ApiManagementView, meta: { requiresAuth: true, title: "API Explorer" } },
+    { path: "/admin/kitchen-sink", name: "kitchen-sink", component: KitchenSinkView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Kitchen Sink" } },
+    { path: "/admin/kitchen-sink/forms", name: "kitchen-forms", component: KitchenFormsView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Forms" } },
+    { path: "/admin/kitchen-sink/charts", name: "kitchen-charts", component: KitchenChartsView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Charts" } },
+    { path: "/admin/development/developers-guide", name: "developers-guide", component: DevelopersGuideView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Developers Guide" } },
+    { path: "/admin/development/database-schema", name: "database-schema", component: DatabaseSchemaView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Database Schema" } },
+    { path: "/admin/development/api-explorer", name: "api-explorer", component: ApiManagementView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "API Explorer" } },
     { path: "/admin/development/api-management", redirect: "/admin/development/api-explorer" },
     {
       path: "/admin/profile",
@@ -116,37 +73,60 @@ const router = createRouter({
       component: { template: "" },
     },
 
+    // ── Attendance ──
+    { path: "/admin/attendance/checkin", name: "attendance-checkin", component: AttendanceCheckInView, meta: { requiresAuth: true, title: "Check In / Out" } },
+    { path: "/admin/attendance/my-history", name: "attendance-my-history", component: AttendanceMyHistoryView, meta: { requiresAuth: true, title: "My Attendance" } },
+    { path: "/admin/attendance/policies", name: "attendance-policies", component: AttendancePolicyView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Work Policies" } },
+    { path: "/admin/attendance/policies/new", name: "attendance-policy-create", component: AttendancePolicyEditorView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "New Policy" } },
+    { path: "/admin/attendance/policies/:id/edit", name: "attendance-policy-edit", component: AttendancePolicyEditorView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Edit Policy" } },
+    { path: "/admin/attendance/records", name: "attendance-records", component: AttendanceAllRecordsView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "All Records" } },
+    { path: "/admin/attendance/report", name: "attendance-report", component: AttendanceReportView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Attendance Report" } },
+    { path: "/admin/attendance/approvals", name: "attendance-approvals", component: AttendanceApprovalView, meta: { requiresAuth: true, roles: ["admin", "hr_admin", "supervisor"], title: "Attendance Approvals" } },
+    { path: "/admin/attendance/corrections", name: "attendance-corrections", component: AttendanceCorrectionsView, meta: { requiresAuth: true, title: "Attendance Corrections" } },
+    { path: "/admin/attendance/team-map", name: "attendance-team-map", component: TeamAttendanceMapView, meta: { requiresAuth: true, title: "Team Attendance Map" } },
+    { path: "/admin/attendance/offices", name: "attendance-offices", component: OfficesView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Office Locations" } },
+    { path: "/admin/attendance/offices/new", name: "attendance-office-create", component: OfficeEditorView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "New Office Location" } },
+    { path: "/admin/attendance/offices/:id/edit", name: "attendance-office-edit", component: OfficeEditorView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Edit Office Location" } },
+
+    // ── HR Management ──
+    { path: "/admin/hr/divisions", name: "hr-divisions", component: DivisionsView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Divisions" } },
+    { path: "/admin/hr/staff", name: "hr-staff", component: StaffView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Employees" } },
+    { path: "/admin/hr/staff/:id/edit", name: "hr-staff-edit", component: StaffEditorView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Edit Employee" } },
+    { path: "/admin/hr/configuration/job-statuses", name: "hr-job-statuses", component: JobStatusesView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Job Statuses" } },
+    { path: "/admin/hr/configuration/job-titles", name: "hr-job-titles", component: JobTitlesView, meta: { requiresAuth: true, roles: ["admin", "hr_admin"], title: "Job Titles" } },
+
     // ── Administration ──
-    { path: "/admin/settings", name: "settings", component: SettingsView, meta: { requiresAuth: true, title: "Settings" } },
-    { path: "/admin/settings/system", name: "settings-system", component: SystemInfoView, meta: { requiresAuth: true, title: "System Info" } },
+    { path: "/admin/settings", name: "settings", component: SettingsView, meta: { requiresAuth: true, roles: ["admin"], title: "Settings" } },
+    { path: "/admin/settings/system", name: "settings-system", component: SystemInfoView, meta: { requiresAuth: true, roles: ["admin"], title: "System Info" } },
+    { path: "/admin/menus", name: "menus", component: MenusView, meta: { requiresAuth: true, roles: ["admin"], title: "Menus" } },
 
     // ── Core Platform: Identity & Access ──
     { path: "/admin/platform/identity", redirect: "/admin/platform/identity/users" },
-    { path: "/admin/platform/identity/users", name: "platform-users", component: UsersView, meta: { requiresAuth: true, title: "Users" } },
-    { path: "/admin/platform/identity/users/new", name: "platform-user-create", component: UserEditView, meta: { requiresAuth: true, title: "New User" } },
-    { path: "/admin/platform/identity/users/:id", name: "platform-user-edit", component: UserEditView, meta: { requiresAuth: true, title: "Edit User" } },
-    { path: "/admin/platform/identity/roles", name: "platform-rbac", component: RolesView, meta: { requiresAuth: true, title: "RBAC" } },
-    { path: "/admin/platform/identity/tokens", name: "platform-tokens", component: ComingSoonView, meta: { requiresAuth: true, title: "Token Management" } },
+    { path: "/admin/platform/identity/users", name: "platform-users", component: UsersView, meta: { requiresAuth: true, roles: ["admin"], title: "Users" } },
+    { path: "/admin/platform/identity/users/new", name: "platform-user-create", component: UserEditView, meta: { requiresAuth: true, roles: ["admin"], title: "New User" } },
+    { path: "/admin/platform/identity/users/:id", name: "platform-user-edit", component: UserEditView, meta: { requiresAuth: true, roles: ["admin"], title: "Edit User" } },
+    { path: "/admin/platform/identity/roles", name: "platform-rbac", component: RolesView, meta: { requiresAuth: true, roles: ["admin"], title: "RBAC" } },
+    { path: "/admin/platform/identity/tokens", name: "platform-tokens", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Token Management" } },
 
-    // ── Core Platform: Observability (Grafana) ──
+    // ── Core Platform: Observability ──
     { path: "/admin/platform/observability", redirect: "/admin/platform/observability/audit-trail" },
-    { path: "/admin/platform/observability/audit-trail", name: "platform-audit-trail", component: AuditLogsView, meta: { requiresAuth: true, title: "Audit Trail" } },
-    { path: "/admin/platform/observability/activity-log", name: "platform-activity-log", component: ComingSoonView, meta: { requiresAuth: true, title: "Activity Log" } },
-    { path: "/admin/platform/observability/logging", name: "platform-logging", component: ComingSoonView, meta: { requiresAuth: true, title: "Logging" } },
-    { path: "/admin/platform/observability/errors", name: "platform-error-tracking", component: ComingSoonView, meta: { requiresAuth: true, title: "Error Tracking" } },
-    { path: "/admin/platform/observability/monitoring", name: "platform-monitoring", component: ComingSoonView, meta: { requiresAuth: true, title: "Monitoring" } },
+    { path: "/admin/platform/observability/audit-trail", name: "platform-audit-trail", component: AuditLogsView, meta: { requiresAuth: true, roles: ["admin"], title: "Audit Trail" } },
+    { path: "/admin/platform/observability/activity-log", name: "platform-activity-log", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Activity Log" } },
+    { path: "/admin/platform/observability/logging", name: "platform-logging", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Logging" } },
+    { path: "/admin/platform/observability/errors", name: "platform-error-tracking", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Error Tracking" } },
+    { path: "/admin/platform/observability/monitoring", name: "platform-monitoring", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Monitoring" } },
 
-    // ── Core Platform: Queue (Laravel Queue) ──
-    { path: "/admin/platform/queue", name: "platform-queue", component: QueueMonitorView, meta: { requiresAuth: true, title: "Queue" } },
-    { path: "/admin/platform/queue/failed", name: "platform-queue-failed", component: ComingSoonView, meta: { requiresAuth: true, title: "Failed Jobs" } },
-    { path: "/admin/platform/queue/scheduled", name: "platform-queue-scheduled", component: ComingSoonView, meta: { requiresAuth: true, title: "Scheduled Jobs" } },
+    // ── Core Platform: Queue ──
+    { path: "/admin/platform/queue", name: "platform-queue", component: QueueMonitorView, meta: { requiresAuth: true, roles: ["admin"], title: "Queue" } },
+    { path: "/admin/platform/queue/failed", name: "platform-queue-failed", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Failed Jobs" } },
+    { path: "/admin/platform/queue/scheduled", name: "platform-queue-scheduled", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Scheduled Jobs" } },
 
     // ── Core Platform: Messaging ──
     { path: "/admin/platform/messaging", redirect: "/admin/platform/messaging/event-bus" },
-    { path: "/admin/platform/messaging/event-bus", name: "platform-event-bus", component: ComingSoonView, meta: { requiresAuth: true, title: "Event Bus" } },
-    { path: "/admin/platform/messaging/notifications", name: "platform-notifications", component: ComingSoonView, meta: { requiresAuth: true, title: "Notifications" } },
+    { path: "/admin/platform/messaging/event-bus", name: "platform-event-bus", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Event Bus" } },
+    { path: "/admin/platform/messaging/notifications", name: "platform-notifications", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Notifications" } },
 
-    // ── Backward-compat redirects from old governance/communication paths ──
+    // ── Backward-compat redirects ──
     { path: "/admin/platform/governance", redirect: "/admin/platform/observability/audit-trail" },
     { path: "/admin/platform/governance/audit-trail", redirect: "/admin/platform/observability/audit-trail" },
     { path: "/admin/platform/governance/activity-log", redirect: "/admin/platform/observability/activity-log" },
@@ -158,22 +138,22 @@ const router = createRouter({
 
     // ── Core Platform: System Management ──
     { path: "/admin/platform/system", redirect: "/admin/platform/system/configuration" },
-    { path: "/admin/platform/system/configuration", name: "platform-config", component: ComingSoonView, meta: { requiresAuth: true, title: "Configuration" } },
-    { path: "/admin/platform/system/feature-flags", name: "platform-feature-flags", component: ComingSoonView, meta: { requiresAuth: true, title: "Feature Flags" } },
-    { path: "/admin/platform/system/scheduler", name: "platform-scheduler", component: ComingSoonView, meta: { requiresAuth: true, title: "Scheduler" } },
+    { path: "/admin/platform/system/configuration", name: "platform-config", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Configuration" } },
+    { path: "/admin/platform/system/feature-flags", name: "platform-feature-flags", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Feature Flags" } },
+    { path: "/admin/platform/system/scheduler", name: "platform-scheduler", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Scheduler" } },
 
     // ── Core Platform: Storage ──
     { path: "/admin/platform/storage", redirect: "/admin/platform/storage/media" },
-    { path: "/admin/platform/storage/media", name: "platform-file-media", component: ComingSoonView, meta: { requiresAuth: true, title: "File / Media Management" } },
+    { path: "/admin/platform/storage/media", name: "platform-file-media", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "File / Media Management" } },
 
-    // ── Core Platform: API Gateway (APISIX) ──
+    // ── Core Platform: API Gateway ──
     { path: "/admin/platform/gateway", redirect: "/admin/platform/gateway/routes" },
-    { path: "/admin/platform/gateway/routes", name: "platform-gateway-routes", component: ComingSoonView, meta: { requiresAuth: true, title: "Routes" } },
-    { path: "/admin/platform/gateway/upstreams", name: "platform-gateway-upstreams", component: ComingSoonView, meta: { requiresAuth: true, title: "Upstreams" } },
-    { path: "/admin/platform/gateway/consumers", name: "platform-gateway-consumers", component: ComingSoonView, meta: { requiresAuth: true, title: "Consumers" } },
-    { path: "/admin/platform/gateway/plugins", name: "platform-gateway-plugins", component: ComingSoonView, meta: { requiresAuth: true, title: "Plugins" } },
-    { path: "/admin/platform/gateway/ssl", name: "platform-gateway-ssl", component: ComingSoonView, meta: { requiresAuth: true, title: "SSL Certificates" } },
-    { path: "/admin/platform/gateway/webhooks", name: "platform-webhooks", component: ComingSoonView, meta: { requiresAuth: true, title: "Webhooks" } },
+    { path: "/admin/platform/gateway/routes", name: "platform-gateway-routes", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Routes" } },
+    { path: "/admin/platform/gateway/upstreams", name: "platform-gateway-upstreams", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Upstreams" } },
+    { path: "/admin/platform/gateway/consumers", name: "platform-gateway-consumers", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Consumers" } },
+    { path: "/admin/platform/gateway/plugins", name: "platform-gateway-plugins", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Plugins" } },
+    { path: "/admin/platform/gateway/ssl", name: "platform-gateway-ssl", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "SSL Certificates" } },
+    { path: "/admin/platform/gateway/webhooks", name: "platform-webhooks", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Webhooks" } },
 
     // ── Backward-compat redirects from old integration paths ──
     { path: "/admin/platform/integration", redirect: "/admin/platform/gateway/routes" },
@@ -182,21 +162,12 @@ const router = createRouter({
 
     // ── Core Platform: AI Integration ──
     { path: "/admin/platform/ai", redirect: "/admin/platform/ai/providers" },
-    { path: "/admin/platform/ai/providers", name: "platform-ai-providers", component: ComingSoonView, meta: { requiresAuth: true, title: "AI Providers" } },
-    { path: "/admin/platform/ai/models", name: "platform-ai-models", component: ComingSoonView, meta: { requiresAuth: true, title: "AI Models" } },
-    { path: "/admin/platform/ai/prompts", name: "platform-ai-prompts", component: ComingSoonView, meta: { requiresAuth: true, title: "Prompt Templates" } },
-    { path: "/admin/platform/ai/usage", name: "platform-ai-usage", component: ComingSoonView, meta: { requiresAuth: true, title: "AI Usage & Billing" } },
+    { path: "/admin/platform/ai/providers", name: "platform-ai-providers", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "AI Providers" } },
+    { path: "/admin/platform/ai/models", name: "platform-ai-models", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "AI Models" } },
+    { path: "/admin/platform/ai/prompts", name: "platform-ai-prompts", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "Prompt Templates" } },
+    { path: "/admin/platform/ai/usage", name: "platform-ai-usage", component: ComingSoonView, meta: { requiresAuth: true, roles: ["admin"], title: "AI Usage & Billing" } },
 
-    // ── Backward-compat redirects from old settings paths ──
     ...settingsRedirects,
-
-    ...legacyAdminPaths.map<RouteRecordRaw>((path) => ({
-      path,
-      redirect: (to: RouteLocationGeneric) => `/admin${to.fullPath}`,
-    })),
-
-    { path: "/", name: "storefront-home", component: StorefrontHomeView, meta: { title: "Webfront" } },
-    { path: "/:slug", name: "storefront-page", component: StorefrontPageView, meta: { title: "Webfront" } },
   ],
 });
 
@@ -210,6 +181,22 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: "main-dashboard" };
+  }
+
+  if (to.meta.roles) {
+    const allowed = to.meta.roles as string[];
+    const role = (auth.user?.role ?? "").toLowerCase();
+    const effectiveRoles = [role];
+    if (auth.user?.hasSupervisees) effectiveRoles.push("supervisor");
+
+    // Allow admin to edit their own profile even on admin-only routes
+    if (to.name === "platform-user-edit" && String(to.params.id) === String(auth.user?.id)) {
+      return true;
+    }
+
+    if (!effectiveRoles.some((r) => allowed.includes(r))) {
+      return { name: "main-dashboard" };
+    }
   }
 
   return true;

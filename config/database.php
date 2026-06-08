@@ -32,6 +32,32 @@ return [
 
     'connections' => [
 
+        'pgsql_attendance' => [
+            'driver'   => 'pgsql',
+            'host'     => env('ATTENDANCE_DB_HOST', '127.0.0.1'),
+            'port'     => env('ATTENDANCE_DB_PORT', '5432'),
+            'database' => env('ATTENDANCE_DB_DATABASE', 'hadir_attendance'),
+            'username' => env('ATTENDANCE_DB_USERNAME', 'hadir'),
+            'password' => env('ATTENDANCE_DB_PASSWORD', ''),
+            'charset'  => 'utf8',
+            'prefix'   => '',
+            'schema'   => 'public',
+            'sslmode'  => 'prefer',
+        ],
+
+        'sso' => [
+            'driver' => 'mysql',
+            'host' => env('SSO_DB_HOST', '127.0.0.1'),
+            'port' => env('SSO_DB_PORT', '3306'),
+            'database' => env('SSO_DB_DATABASE', 'testagent'),
+            'username' => env('SSO_DB_USERNAME', 'root'),
+            'password' => env('SSO_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => false,
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),

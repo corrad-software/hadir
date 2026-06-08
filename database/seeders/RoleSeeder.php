@@ -7,9 +7,6 @@ use Illuminate\Database\Seeder;
 
 class RoleSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         Role::updateOrCreate(
@@ -17,13 +14,46 @@ class RoleSeeder extends Seeder
             [
                 'description' => 'Full system access',
                 'permissions' => [
-                    'posts.view', 'posts.create', 'posts.edit', 'posts.delete',
-                    'pages.view', 'pages.create', 'pages.edit', 'pages.delete',
-                    'media.view', 'media.upload', 'media.delete',
                     'users.view', 'users.create', 'users.edit', 'users.delete',
                     'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
                     'settings.view', 'settings.edit',
-                    'menus.view', 'menus.edit',
+                    'audit.read',
+                    'attendance.view_own', 'attendance.checkin',
+                    'attendance.view_team', 'attendance.view_all', 'attendance.manage',
+                    'attendance.policy_view', 'attendance.policy_edit',
+                    'attendance.approve',
+                    'hr.view', 'hr.manage',
+                    'staff.view', 'staff.manage',
+                    'correction.request', 'correction.review',
+                ],
+            ]
+        );
+
+        Role::updateOrCreate(
+            ['name' => 'hr_admin'],
+            [
+                'description' => 'HR Admin — manage attendance records and policies',
+                'permissions' => [
+                    'attendance.view_own', 'attendance.checkin',
+                    'attendance.view_team', 'attendance.view_all', 'attendance.manage',
+                    'attendance.policy_view', 'attendance.policy_edit',
+                    'attendance.approve',
+                    'hr.view', 'hr.manage',
+                    'staff.view', 'staff.manage',
+                    'correction.request', 'correction.review',
+                ],
+            ]
+        );
+
+        Role::updateOrCreate(
+            ['name' => 'user'],
+            [
+                'description' => 'Regular staff member',
+                'permissions' => [
+                    'attendance.view_own', 'attendance.checkin',
+                    'attendance.view_team',
+                    'attendance.approve',
+                    'correction.request',
                 ],
             ]
         );

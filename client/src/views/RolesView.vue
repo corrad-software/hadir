@@ -23,13 +23,16 @@ const confirmDialog = useConfirmDialog();
 const toast = useToast();
 
 const availablePermissions = [
-  "posts.view", "posts.create", "posts.edit", "posts.delete",
-  "pages.view", "pages.create", "pages.edit", "pages.delete",
-  "media.view", "media.upload", "media.delete",
   "users.view", "users.create", "users.edit", "users.delete",
   "roles.view", "roles.create", "roles.edit", "roles.delete",
   "settings.view", "settings.edit",
-  "menus.view", "menus.edit",
+  "audit.read",
+  "attendance.view_own", "attendance.checkin",
+  "attendance.view_all", "attendance.manage",
+  "attendance.policy_view", "attendance.policy_edit",
+  "attendance.approve",
+  "hr.view", "hr.manage",
+  "staff.view", "staff.manage",
 ];
 
 const form = ref<RoleInput>({

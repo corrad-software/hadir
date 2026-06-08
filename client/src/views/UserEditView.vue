@@ -14,7 +14,7 @@ import {
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { useAuthStore } from "@/stores/auth";
-import { getUser, createUser, updateUser, listRoles } from "@/api/cms";
+import { getUser, createUser, updateUser, listRoles, resetUserPassword } from "@/api/cms";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
 import { API_BASE_URL } from "@/env";
@@ -170,13 +170,7 @@ async function savePassword() {
         newPassword: passwordForm.value.newPassword,
       });
     } else {
-      await updateUser(userId.value!, {
-        name: profileForm.value.name,
-        email: profileForm.value.email,
-        password: passwordForm.value.newPassword,
-        role: profileForm.value.role,
-        isActive: profileForm.value.isActive,
-      });
+      await resetUserPassword(userId.value!, passwordForm.value.newPassword, passwordForm.value.confirmPassword);
     }
     passwordChanged.value = true;
     toast.success(isSelf.value ? "Password changed" : "Password updated");

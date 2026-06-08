@@ -1,4 +1,3 @@
-export type PublishStatus = "draft" | "published" | "archived";
 export type ThemeColor = "violet" | "blue" | "green" | "red" | "black-white" | "grey";
 
 export type ApiError = { error: { code: string; message: string; details?: unknown } };
@@ -11,83 +10,7 @@ export type User = {
   name: string;
   photoUrl?: string;
   role?: string;
-};
-
-export type PostInput = {
-  title: string;
-  slug?: string;
-  excerpt?: string;
-  content: string;
-  status: PublishStatus;
-  featuredImageId?: number | null;
-  categoryIds?: number[];
-};
-
-export type Post = PostInput & {
-  id: number;
-  slug: string;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  featuredImage?: Media | null;
-  categories?: Category[];
-};
-
-export type CategoryInput = {
-  name: string;
-  slug?: string;
-  description?: string;
-};
-
-export type Category = {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  createdAt: string;
-  updatedAt: string;
-  _count?: { posts: number };
-};
-
-export type PageInput = {
-  title: string;
-  slug?: string;
-  content: string;
-  status: PublishStatus;
-  featuredImageId?: number | null;
-};
-
-export type Page = PageInput & {
-  id: number;
-  slug: string;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  featuredImage?: Media | null;
-};
-
-export type Media = {
-  id: number;
-  filename: string;
-  originalName: string;
-  title: string | null;
-  caption: string | null;
-  description: string | null;
-  mimeType: string;
-  size: number;
-  width: number | null;
-  height: number | null;
-  altText: string | null;
-  path: string;
-  url: string;
-  createdAt: string;
-};
-
-export type MediaMetadataInput = {
-  title: string;
-  altText: string;
-  caption: string;
-  description: string;
+  hasSupervisees?: boolean;
 };
 
 export type SettingsPayload = {
@@ -105,21 +28,6 @@ export type SettingsPayload = {
   timezone: string;
   footerText: string;
   frontPageId: number | null;
-};
-
-export type PublicSiteSettings = Pick<
-  SettingsPayload,
-  "siteTitle" | "tagline" | "webfrontTitle" | "webfrontTagline" | "metaDescription" | "footerText" | "siteIconUrl" | "webfrontLogoUrl" | "sidebarLogoUrl" | "faviconUrl"
-> & {
-  storefrontMenu: StorefrontMenuItem[];
-};
-
-export type StorefrontMenuItem = {
-  id: string;
-  label: string;
-  href: string;
-  parentId: string | null;
-  openInNewTab: boolean;
 };
 
 export type Role = {
@@ -143,6 +51,11 @@ export type UserDetail = {
   email: string;
   role: string;
   isActive: boolean;
+  photoUrl: string | null;
+  divisionId: number | null;
+  divisionName: string | null;
+  supervisorId: number | null;
+  supervisorName: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -167,4 +80,225 @@ export type AuditLog = {
   userAgent: string | null;
   createdAt: string;
   user?: { id: number; name: string; email: string } | null;
+};
+
+export type AttendanceStatus = 'on_time' | 'late' | 'early_leave' | 'absent' | 'pending';
+
+export type AttendanceApprovalStatus = 'pending_approval' | 'approved' | 'rejected';
+
+export type AttendancePolicyInput = {
+  name: string;
+  work_days: number[];
+  start_time: string;
+  end_time: string;
+  grace_period_minutes?: number;
+  is_active?: boolean;
+};
+
+export type AttendancePolicy = {
+  id: number;
+  name: string;
+  workDays: number[];
+  startTime: string;
+  endTime: string;
+  gracePeriodMinutes: number;
+  officesCount?: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OfficeInput = {
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  radiusMeters: number;
+  policyId: number | null;
+};
+
+export type Office = {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  policyId: number;
+  policyName: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AttendanceLog = {
+  id: number;
+  userId: number;
+  workDate: string;
+  checkInAt: string | null;
+  checkInLatitude: number | null;
+  checkInLongitude: number | null;
+  checkInWithinRadius: boolean | null;
+  checkOutAt: string | null;
+  checkOutLatitude: number | null;
+  checkOutLongitude: number | null;
+  checkOutWithinRadius: boolean | null;
+  status: AttendanceStatus;
+  notes: string | null;
+  approvalStatus: AttendanceApprovalStatus | null;
+  approvedBy: number | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: { id: number; name: string; email: string } | null;
+};
+
+export type CheckInInput = {
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+export type AttendanceLogUpdateInput = {
+  status?: AttendanceStatus;
+  notes?: string;
+};
+
+export type TeamMemberAttendance = {
+  id: number;
+  name: string;
+  photoUrl: string | null;
+  checkedIn: boolean;
+  checkedOut: boolean;
+  status: AttendanceStatus | "absent";
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  withinRadius: boolean | null;
+};
+
+export type AttendanceReportRow = {
+  workDate: string;
+  onTime: number;
+  late: number;
+  earlyLeave: number;
+  absent: number;
+  pending: number;
+  total: number;
+};
+
+export type DivisionInput = {
+  name: string;
+  parentId?: number | null;
+  attendancePolicyId?: number | null;
+};
+
+export type Division = {
+  id: number;
+  name: string;
+  parentId: number | null;
+  attendancePolicyId: number | null;
+  childrenCount: number;
+  usersCount: number;
+  children?: Division[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type DivisionTransfer = {
+  id: number;
+  userId: number;
+  fromDivisionId: number | null;
+  toDivisionId: number;
+  toDivisionName?: string | null;
+  effectiveDate: string;
+  processed: boolean;
+  createdAt: string;
+};
+
+export type JobStatusInput = { name: string };
+export type JobStatus = JobStatusInput & { id: number; createdAt: string; updatedAt: string };
+
+export type JobTitleInput = { name: string };
+export type JobTitle = JobTitleInput & { id: number; createdAt: string; updatedAt: string };
+
+export type StaffMember = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  photoUrl: string | null;
+  dob: string | null;
+  phone: string | null;
+  sex: 'male' | 'female' | 'other' | null;
+  jobTitleId: number | null;
+  jobTitleName: string | null;
+  jobStatusId: number | null;
+  jobStatusName: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  addressTownship: string | null;
+  addressPostcode: string | null;
+  addressState: string | null;
+  officeId: number | null;
+  officeName: string | null;
+  divisionId: number | null;
+  divisionName: string | null;
+  supervisorId: number | null;
+  supervisorName: string | null;
+  pendingTransfer?: DivisionTransfer | null;
+};
+
+export type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  url: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+export type CorrectionStatus = "pending" | "approved" | "rejected";
+
+export type AttendanceCorrectionInput = {
+  attendanceLogId: number;
+  correctedCheckInAt?: string | null;
+  correctedCheckOutAt?: string | null;
+  reason: string;
+};
+
+export type AttendanceCorrection = {
+  id: number;
+  attendanceLogId: number;
+  userId: number;
+  userName: string;
+  workDate: string;
+  originalCheckInAt: string | null;
+  originalCheckOutAt: string | null;
+  correctedCheckInAt: string | null;
+  correctedCheckOutAt: string | null;
+  reason: string;
+  status: CorrectionStatus;
+  reviewedBy: number | null;
+  reviewedByName: string | null;
+  reviewedAt: string | null;
+  rejectionNote: string | null;
+  createdAt: string;
+};
+
+export type StaffUpdateInput = {
+  name?: string;
+  dob?: string | null;
+  phone?: string | null;
+  sex?: string | null;
+  jobTitleId?: number | null;
+  jobStatusId?: number | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  addressTownship?: string | null;
+  addressPostcode?: string | null;
+  addressState?: string | null;
+  officeId?: number | null;
+  divisionId?: number | null;
+  supervisorId?: number | null;
 };

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bell, Check, ChevronDown, LogOut, Settings, Shield } from "lucide-vue-next";
+import { Bell, Check, ChevronDown, LogOut, Menu, Settings, Shield, X } from "lucide-vue-next";
 
-import type { ThemeColor } from "@/types";
+import type { AppNotification, ThemeColor } from "@/types";
 import type { MenuItemDef, MenuNode } from "@/config/admin-menu";
 import { useSidebarCollapse } from "@/composables/useSidebarCollapse";
 import { useToast } from "@/composables/useToast";
 import AppToastRegion from "@/components/AppToastRegion.vue";
+import SessionTimeoutModal from "@/components/SessionTimeoutModal.vue";
 
 import { useAuthStore } from "@/stores/auth";
 import { useMenuStore } from "@/stores/menu";
 import { useSiteStore } from "@/stores/site";
 import { useUiThemeStore } from "@/stores/uiTheme";
 import { API_BASE_URL } from "@/env";
+import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from "@/api/cms";
 
 const route = useRoute();
 const router = useRouter();
@@ -26,6 +28,66 @@ const { isCollapsed, isCompact, toggle: toggleSidebar, toggleCompact } = useSide
 
 const settingsOpen = ref(false);
 const settingsDropdownRef = ref<HTMLElement | null>(null);
+const mobileMenuOpen = ref(false);
+
+// Notifications
+const notifOpen = ref(false);
+const notifDropdownRef = ref<HTMLElement | null>(null);
+const notifications = ref<AppNotification[]>([]);
+const unreadCount = ref(0);
+let notifPollTimer: number | null = null;
+
+async function loadUnreadCount() {
+  try {
+    const res = await getUnreadCount();
+    unreadCount.value = res.data.count;
+  } catch {
+    // ignore silently
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const res = await getNotifications();
+    notifications.value = res.data;
+    unreadCount.value = res.data.filter((n) => !n.read).length;
+  } catch {
+    // ignore silently
+  }
+}
+
+async function toggleNotif() {
+  notifOpen.value = !notifOpen.value;
+  if (notifOpen.value) {
+    await loadNotifications();
+  }
+}
+
+async function handleNotifClick(n: AppNotification) {
+  if (!n.read) {
+    await markNotificationRead(n.id);
+    n.read = true;
+    unreadCount.value = Math.max(0, unreadCount.value - 1);
+  }
+  notifOpen.value = false;
+  if (n.url) router.push(n.url);
+}
+
+async function markAllRead() {
+  await markAllNotificationsRead();
+  notifications.value.forEach((n) => (n.read = true));
+  unreadCount.value = 0;
+}
+
+function formatNotifTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return d.toLocaleDateString();
+}
 
 const themeChoices: Array<{ label: string; value: ThemeColor }> = [
   { label: "Violet", value: "violet" },
@@ -37,14 +99,20 @@ const themeChoices: Array<{ label: string; value: ThemeColor }> = [
 ];
 
 const handleDocumentClick = (event: MouseEvent) => {
-  if (!settingsOpen.value) return;
-  if (!settingsDropdownRef.value) return;
-  if (settingsDropdownRef.value.contains(event.target as Node)) return;
-  settingsOpen.value = false;
+  if (settingsOpen.value && settingsDropdownRef.value && !settingsDropdownRef.value.contains(event.target as Node)) {
+    settingsOpen.value = false;
+  }
+  if (notifOpen.value && notifDropdownRef.value && !notifDropdownRef.value.contains(event.target as Node)) {
+    notifOpen.value = false;
+  }
 };
 
 const handleEscape = (event: KeyboardEvent) => {
-  if (event.key === "Escape") settingsOpen.value = false;
+  if (event.key === "Escape") {
+    settingsOpen.value = false;
+    mobileMenuOpen.value = false;
+    notifOpen.value = false;
+  }
 };
 
 function resolveUrl(url: string) {
@@ -58,6 +126,8 @@ onMounted(() => {
   menuStore.load();
   document.addEventListener("click", handleDocumentClick);
   document.addEventListener("keydown", handleEscape);
+  loadUnreadCount();
+  notifPollTimer = window.setInterval(loadUnreadCount, 30_000);
 });
 
 onBeforeUnmount(() => {
@@ -66,6 +136,10 @@ onBeforeUnmount(() => {
   if (showTitleTimer !== null) {
     window.clearTimeout(showTitleTimer);
     showTitleTimer = null;
+  }
+  if (notifPollTimer !== null) {
+    window.clearInterval(notifPollTimer);
+    notifPollTimer = null;
   }
 });
 
@@ -126,8 +200,8 @@ async function signOut() {
 }
 
 function isActive(path: string): boolean {
-  if (path === "/") return route.path === "/";
-  return route.path.startsWith(path);
+  if (path === "/" || path === "/admin") return route.path === path;
+  return route.path === path || route.path.startsWith(path + "/");
 }
 
 function itemClass(path: string) {
@@ -154,6 +228,22 @@ function isNodeActive(node: { to: string; children?: MenuNode[] }): boolean {
   return node.children.some((child) => isNodeActive(child));
 }
 
+const visibleMenu = computed(() => {
+  const role = (auth.user?.role ?? "").toLowerCase();
+  const effectiveRoles = [role];
+  if (auth.user?.hasSupervisees) effectiveRoles.push("supervisor");
+
+  const canSee = (roles?: string[]) => !roles || roles.some((r) => effectiveRoles.includes(r));
+
+  return menuStore.resolvedMenu
+    .filter((group) => canSee(group.roles))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canSee(item.roles)),
+    }))
+    .filter((group) => group.items.length > 0);
+});
+
 function syncOpenMenus() {
   const syncNode = (node: MenuNode | MenuItemDef) => {
     if (node.children && node.children.length > 0 && isNodeActive(node)) {
@@ -162,15 +252,18 @@ function syncOpenMenus() {
     }
   };
 
-  for (const group of menuStore.resolvedMenu) {
+  for (const group of visibleMenu.value) {
     for (const item of group.items) {
       syncNode(item);
     }
   }
 }
 
-watch(() => route.path, syncOpenMenus, { immediate: true });
-watch(() => menuStore.resolvedMenu, syncOpenMenus, { deep: true });
+watch(() => route.path, () => {
+  syncOpenMenus();
+  mobileMenuOpen.value = false;
+}, { immediate: true });
+watch(visibleMenu, syncOpenMenus, { deep: true });
 watch(
   hasActiveToast,
   (active) => {
@@ -193,48 +286,57 @@ watch(
 
 <template>
   <div class="min-h-screen bg-[#f8f9fb]">
-    <header class="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-slate-200 bg-white px-5">
-      <div class="flex items-center gap-1">
-        <div v-if="site.siteIconUrl" class="flex h-[18px] shrink-0 items-center justify-center overflow-hidden">
+    <header class="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-slate-200 bg-white px-3 md:px-5">
+      <div class="flex items-center gap-2">
+        <!-- Hamburger: mobile only -->
+        <button
+          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
+          @click="mobileMenuOpen = !mobileMenuOpen"
+        >
+          <component :is="mobileMenuOpen ? X : Menu" class="h-4 w-4" />
+        </button>
+
+        <div v-if="site.siteIconUrl" class="flex h-[16px] shrink-0 items-center justify-center overflow-hidden">
           <img :src="resolveUrl(site.siteIconUrl)" alt="Site icon" class="h-full w-auto object-contain" />
         </div>
         <div
           v-else
-          class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)]"
+          class="flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)]"
         >
-          <Shield class="h-[11px] w-[11px] text-white" />
+          <Shield class="h-[10px] w-[10px] text-white" />
         </div>
       </div>
 
       <div class="flex items-center self-stretch">
         <div
           v-if="site.siteTitle && showSiteTitle"
-          class="flex h-full items-center overflow-hidden whitespace-nowrap"
+          class="hidden h-full items-center overflow-hidden whitespace-nowrap md:flex"
         >
           <span class="px-4 text-sm font-light text-slate-900">{{ headerSiteTitle }}</span>
           <span class="h-full w-px bg-slate-200" />
         </div>
         <AppToastRegion />
 
+        <!-- User avatar + name/role (name/role hidden on mobile) -->
         <router-link
           :to="'/admin/settings/users/' + auth.user?.id"
-          class="group relative flex h-full items-center gap-2 px-4 transition-colors hover:bg-[var(--accent-600)]"
+          class="group relative flex h-full items-center gap-2 px-3 transition-colors hover:bg-[var(--accent-600)] md:px-4"
         >
           <div
             class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)] text-[10px] font-semibold text-white"
           >
             {{ userInitials }}
           </div>
-          <div class="leading-tight">
+          <div class="hidden leading-tight md:block">
             <p class="text-sm font-medium text-slate-700 group-hover:text-white">{{ headerUserName }}</p>
             <p class="text-[11px] text-slate-500 group-hover:text-white/80">{{ headerUserRole }}</p>
           </div>
           <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">Profile</span>
         </router-link>
 
-        <span class="h-full w-px bg-slate-200" />
-
-        <div ref="settingsDropdownRef" class="relative flex h-full items-stretch">
+        <!-- Settings: hidden on mobile -->
+        <span class="hidden h-full w-px bg-slate-200 md:block" />
+        <div ref="settingsDropdownRef" class="relative hidden h-full items-stretch md:flex">
           <button
             class="group relative flex h-full items-center px-4 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white"
             @click.stop="settingsOpen = !settingsOpen"
@@ -301,18 +403,63 @@ watch(
 
         <span class="h-full w-px bg-slate-200" />
 
-        <button
-          class="group relative flex h-full items-center px-4 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white"
-        >
-          <Bell class="h-4 w-4" />
-          <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
-          <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">Notifications</span>
-        </button>
+        <!-- Notification bell -->
+        <div ref="notifDropdownRef" class="relative flex h-full items-stretch">
+          <button
+            class="group relative flex h-full items-center px-3 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white md:px-4"
+            @click.stop="toggleNotif"
+          >
+            <Bell class="h-4 w-4" />
+            <span v-if="unreadCount > 0" class="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-1 ring-white">
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
+            </span>
+            <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">Notifications</span>
+          </button>
+
+          <div
+            v-if="notifOpen"
+            class="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-slate-200 bg-white shadow-xl"
+          >
+            <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
+              <span class="text-sm font-semibold text-slate-800">Notifications</span>
+              <button
+                v-if="unreadCount > 0"
+                class="text-xs text-[var(--accent-600)] hover:underline"
+                @click="markAllRead"
+              >
+                Mark all read
+              </button>
+            </div>
+
+            <div class="max-h-[360px] overflow-y-auto">
+              <div v-if="notifications.length === 0" class="px-4 py-8 text-center text-sm text-slate-400">
+                No notifications
+              </div>
+              <button
+                v-for="n in notifications"
+                :key="n.id"
+                class="flex w-full items-start gap-3 border-b border-slate-100 px-4 py-3 text-left transition-colors hover:bg-slate-50 last:border-0"
+                :class="n.read ? 'opacity-60' : ''"
+                @click="handleNotifClick(n)"
+              >
+                <span
+                  class="mt-0.5 h-2 w-2 shrink-0 rounded-full"
+                  :class="n.read ? 'bg-slate-300' : 'bg-[var(--accent-500)]'"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs font-medium text-slate-800">{{ n.title }}</p>
+                  <p class="mt-0.5 text-xs text-slate-500">{{ n.body }}</p>
+                  <p class="mt-1 text-[11px] text-slate-400">{{ formatNotifTime(n.createdAt) }}</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
 
         <span class="h-full w-px bg-slate-200" />
 
         <button
-          class="group relative flex h-full items-center px-4 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white"
+          class="group relative flex h-full items-center px-3 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white md:px-4"
           @click="signOut"
         >
           <LogOut class="h-4 w-4" />
@@ -321,10 +468,25 @@ watch(
       </div>
     </header>
 
-    <div class="flex flex-col md:flex-row">
+    <!-- Mobile backdrop -->
+    <Teleport to="body">
+      <div
+        v-if="mobileMenuOpen"
+        class="fixed inset-0 z-40 bg-black/40 md:hidden"
+        @click="mobileMenuOpen = false"
+      />
+    </Teleport>
+
+    <div class="flex md:flex-row">
+      <!-- Sidebar: fixed overlay drawer on mobile, in-flow on desktop -->
       <aside
-        class="relative flex flex-col border-r border-slate-200 bg-slate-50/50 transition-[width] duration-300 ease-in-out md:min-h-[calc(100vh-40px)]"
-        :class="isCollapsed ? 'w-full md:w-14' : 'w-full md:w-64'"
+        class="flex flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-300 ease-in-out
+               fixed top-10 bottom-0 left-0 z-50 w-72 overflow-y-auto shadow-xl
+               md:relative md:top-auto md:bottom-auto md:left-auto md:z-auto md:overflow-visible md:shadow-none md:min-h-[calc(100vh-40px)] md:bg-slate-50/50"
+        :class="[
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          isCollapsed ? 'md:w-14' : 'md:w-64',
+        ]"
       >
         <button
           class="absolute -right-3.5 top-10 z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-[var(--accent-600)] text-white shadow-md transition-all hover:bg-[var(--accent-700)] hover:shadow-lg md:flex"
@@ -339,16 +501,16 @@ watch(
 
         <div
           v-if="site.sidebarLogoUrl"
-          class="border-b border-slate-200 bg-white px-3 py-3"
+          class="border-b border-slate-200 bg-white px-3 py-2"
           :class="isCollapsed ? 'md:hidden' : ''"
         >
-          <div class="flex h-12 items-center justify-center overflow-hidden">
+          <div class="flex h-8 items-center justify-center overflow-hidden">
             <img :src="resolveUrl(site.sidebarLogoUrl)" alt="Sidebar logo" class="h-full w-full object-contain" />
           </div>
         </div>
 
         <nav class="flex-1 p-3" :class="isCollapsed ? 'md:overflow-visible md:px-0 md:py-2' : ''">
-          <div v-for="(group, gi) in menuStore.resolvedMenu" :key="group.id">
+          <div v-for="(group, gi) in visibleMenu" :key="group.id">
             <p
               v-if="group.label"
               class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
@@ -476,5 +638,7 @@ watch(
         <slot />
       </main>
     </div>
+
+    <SessionTimeoutModal />
   </div>
 </template>

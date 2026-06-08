@@ -11,10 +11,11 @@ const router = useRouter();
 const auth = useAuthStore();
 const site = useSiteStore();
 
-const email = ref("admin@example.com");
-const password = ref("admin12345");
+const email = ref("");
+const password = ref("");
 const error = ref("");
 const showPassword = ref(false);
+const showForgotInfo = ref(false);
 
 function resolveUrl(url: string) {
   if (!url) return "";
@@ -38,22 +39,21 @@ async function submit() {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col items-center justify-center bg-[#f6f9fc] px-4">
+  <div class="flex min-h-screen flex-col items-center bg-[#f6f9fc] px-4 pt-14 md:pt-24">
     <div class="w-full max-w-[400px]">
       <!-- Logo -->
-      <div class="mb-7 flex justify-center">
-        <div v-if="site.siteIconUrl" class="flex h-8 items-center justify-center overflow-hidden">
+      <div class="mb-5 flex justify-center">
+        <div v-if="site.siteIconUrl" class="flex h-5 items-center justify-center overflow-hidden">
           <img :src="resolveUrl(site.siteIconUrl)" alt="Site logo" class="h-full w-auto object-contain" />
         </div>
-        <div v-else class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
-          <Shield class="h-4 w-4 text-white" />
+        <div v-else class="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-violet-600 to-indigo-600">
+          <Shield class="h-3 w-3 text-white" />
         </div>
       </div>
 
       <!-- Card -->
       <div class="rounded-lg border border-[#e3e8ee] bg-white px-10 pb-10 pt-8 shadow-[0_2px_4px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)]">
-        <h1 class="mb-1 text-center text-xl font-semibold tracking-tight text-[#1a1f36]">Sign in to your account</h1>
-        <p class="mb-8 text-center text-[13px] text-[#697386]">{{ site.siteTitle || 'Admin' }} Dashboard</p>
+        <h1 class="mb-8 text-center text-xl font-semibold tracking-tight text-[#1a1f36]">Sign in to your account</h1>
 
         <!-- Form -->
         <form class="space-y-5" @submit.prevent="submit">
@@ -87,6 +87,16 @@ async function submit() {
             </div>
           </div>
 
+          <!-- Forgot password -->
+          <div class="flex justify-end">
+            <button type="button" class="text-[12px] text-[#5469d4] hover:underline" @click="showForgotInfo = !showForgotInfo">
+              Forgot password?
+            </button>
+          </div>
+          <div v-if="showForgotInfo" class="rounded-md border border-[#d8dee4] bg-[#f6f9fc] px-3.5 py-3 text-[12px] text-[#697386]">
+            Passwords are managed by your system administrator. Contact your admin or IT team to reset your password.
+          </div>
+
           <!-- Error -->
           <div v-if="error" class="flex items-center gap-2 rounded-md border border-[#f8d7da] bg-[#fdf2f2] px-3.5 py-2.5 text-[13px] text-[#cd3d64]">
             <AlertCircle class="h-4 w-4 shrink-0" />
@@ -95,7 +105,7 @@ async function submit() {
 
           <button
             type="submit"
-            class="flex w-full items-center justify-center gap-2 rounded-md bg-[#5469d4] px-4 py-[9px] text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)] transition-all hover:bg-[#4558b8] disabled:opacity-60"
+            class="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-[9px] text-sm font-medium text-white shadow-[0_1px_2px_rgba(0,0,0,0.08),0_2px_4px_rgba(0,0,0,0.04)] transition-all hover:bg-slate-800 disabled:opacity-60"
             :disabled="auth.loading"
           >
             {{ auth.loading ? 'Signing in...' : 'Continue' }}

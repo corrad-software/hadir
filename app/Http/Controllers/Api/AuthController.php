@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Traits\ApiResponse;
+use App\Models\SsoUser;
+use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -25,15 +28,37 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->only('email', 'password');
+        $email = $request->input('email');
+        $password = $request->input('password');
 
-        if (! Auth::attempt($credentials)) {
+        $ssoUser = SsoUser::where('email', $email)->first();
+
+        if (! $ssoUser || ! password_verify($password, $ssoUser->passwordHash)) {
             return $this->sendError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
         }
 
+        // Sync local user from SSO data (name included in create to satisfy NOT NULL)
+        $user = User::firstOrCreate(
+            ['email' => $ssoUser->email],
+            [
+                'name' => $ssoUser->name,
+                'password' => Hash::make(Str::random(32)),
+            ]
+        );
+
+        $ssoRole = strtolower($ssoUser->role);
+        $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
+        $user->update([
+            'name'     => $ssoUser->name,
+            'role'     => $ssoRole,
+            'role_id'  => $roleModel?->id,
+            'photo_url' => $ssoUser->avatarUrl ?: null,
+            'is_active' => true,
+        ]);
+
+        Auth::login($user);
         $request->session()->regenerate();
 
-        $user = Auth::user();
         $this->auditService->logAuth('login', $user);
 
         return $this->sendOk([
@@ -65,6 +90,19 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        // Keep role in sync with SSO on every session check
+        $ssoUser = SsoUser::where('email', $user->email)->first();
+        if ($ssoUser) {
+            $ssoRole = strtolower($ssoUser->role);
+            if ($ssoRole !== $user->role) {
+                $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
+                $user->update([
+                    'role'    => $ssoRole,
+                    'role_id' => $roleModel?->id,
+                ]);
+            }
+        }
 
         return $this->sendOk([
             'user' => $this->userPayload($user),
@@ -99,22 +137,7 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
-        $request->validate([
-            'current_password' => 'required|string',
-            'new_password' => 'required|string|min:6',
-        ]);
-
-        $user = $request->user();
-
-        if (! Hash::check($request->input('current_password'), $user->password)) {
-            return $this->sendError(400, 'INVALID_PASSWORD', 'Current password is incorrect');
-        }
-
-        $user->update([
-            'password' => Hash::make($request->input('new_password')),
-        ]);
-
-        return $this->sendOk(['message' => 'Password changed successfully']);
+        return $this->sendError(400, 'SSO_MANAGED', 'Password is managed by the SSO provider and cannot be changed here');
     }
 
     /**
@@ -180,11 +203,12 @@ class AuthController extends Controller
     protected function userPayload($user): array
     {
         return [
-            'id' => $user->id,
-            'email' => $user->email,
-            'name' => $user->name,
-            'photo_url' => $user->photo_url,
-            'role' => $user->role,
+            'id'              => $user->id,
+            'email'           => $user->email,
+            'name'            => $user->name,
+            'photo_url'       => $user->photo_url,
+            'role'            => $user->role,
+            'has_supervisees' => User::where('supervisor_id', $user->id)->exists(),
         ];
     }
 }

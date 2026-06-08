@@ -4,31 +4,6 @@ namespace App\Enums;
 
 class Permission
 {
-    // Posts
-    const POSTS_VIEW = 'posts.view';
-
-    const POSTS_CREATE = 'posts.create';
-
-    const POSTS_EDIT = 'posts.edit';
-
-    const POSTS_DELETE = 'posts.delete';
-
-    // Pages
-    const PAGES_VIEW = 'pages.view';
-
-    const PAGES_CREATE = 'pages.create';
-
-    const PAGES_EDIT = 'pages.edit';
-
-    const PAGES_DELETE = 'pages.delete';
-
-    // Media
-    const MEDIA_VIEW = 'media.view';
-
-    const MEDIA_UPLOAD = 'media.upload';
-
-    const MEDIA_DELETE = 'media.delete';
-
     // Users
     const USERS_VIEW = 'users.view';
 
@@ -52,25 +27,67 @@ class Permission
 
     const SETTINGS_EDIT = 'settings.edit';
 
-    // Menus
-    const MENUS_VIEW = 'menus.view';
-
-    const MENUS_EDIT = 'menus.edit';
-
     // Audit
     const AUDIT_READ = 'audit.read';
+
+    // Attendance
+    const ATTENDANCE_VIEW_OWN = 'attendance.view_own';
+
+    const ATTENDANCE_CHECKIN = 'attendance.checkin';
+
+    const ATTENDANCE_VIEW_ALL = 'attendance.view_all';
+
+    const ATTENDANCE_MANAGE = 'attendance.manage';
+
+    const ATTENDANCE_POLICY_VIEW = 'attendance.policy_view';
+
+    const ATTENDANCE_POLICY_EDIT = 'attendance.policy_edit';
+
+    const ATTENDANCE_APPROVE = 'attendance.approve';
+
+    const ATTENDANCE_VIEW_TEAM = 'attendance.view_team';
+
+    // HR / Divisions
+    const HR_VIEW = 'hr.view';
+
+    const HR_MANAGE = 'hr.manage';
+
+    // Staff
+    const STAFF_VIEW = 'staff.view';
+
+    const STAFF_MANAGE = 'staff.manage';
+
+    // HR Configuration
+    const JOB_STATUSES_VIEW = 'job_statuses.view';
+
+    const JOB_STATUSES_MANAGE = 'job_statuses.manage';
+
+    const JOB_TITLES_VIEW = 'job_titles.view';
+
+    const JOB_TITLES_MANAGE = 'job_titles.manage';
+
+    // Corrections
+    const CORRECTION_REQUEST = 'correction.request';
+
+    const CORRECTION_REVIEW = 'correction.review';
 
     public static function all(): array
     {
         return [
-            self::POSTS_VIEW, self::POSTS_CREATE, self::POSTS_EDIT, self::POSTS_DELETE,
-            self::PAGES_VIEW, self::PAGES_CREATE, self::PAGES_EDIT, self::PAGES_DELETE,
-            self::MEDIA_VIEW, self::MEDIA_UPLOAD, self::MEDIA_DELETE,
             self::USERS_VIEW, self::USERS_CREATE, self::USERS_EDIT, self::USERS_DELETE,
             self::ROLES_VIEW, self::ROLES_CREATE, self::ROLES_EDIT, self::ROLES_DELETE,
             self::SETTINGS_VIEW, self::SETTINGS_EDIT,
-            self::MENUS_VIEW, self::MENUS_EDIT,
             self::AUDIT_READ,
+            self::ATTENDANCE_VIEW_OWN, self::ATTENDANCE_CHECKIN,
+            self::ATTENDANCE_VIEW_TEAM, self::ATTENDANCE_VIEW_ALL,
+            self::ATTENDANCE_MANAGE,
+            self::ATTENDANCE_POLICY_VIEW, self::ATTENDANCE_POLICY_EDIT,
+            self::ATTENDANCE_APPROVE,
+            self::HR_VIEW, self::HR_MANAGE,
+            self::STAFF_VIEW, self::STAFF_MANAGE,
+            self::JOB_STATUSES_VIEW, self::JOB_STATUSES_MANAGE,
+            self::JOB_TITLES_VIEW, self::JOB_TITLES_MANAGE,
+            self::CORRECTION_REQUEST, self::CORRECTION_REVIEW,
         ];
     }
 }
