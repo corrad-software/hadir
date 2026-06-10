@@ -1,4 +1,6 @@
-# Deprecated: Coolify uses `Dockerfile` at repo root. This file is kept for reference.
+# Laravel API image (Coolify default Dockerfile name)
+# Frontend: use Dockerfile.frontend
+
 # syntax=docker/dockerfile:1
 
 FROM composer:2 AS vendor
