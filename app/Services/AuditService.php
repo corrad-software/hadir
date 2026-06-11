@@ -25,19 +25,23 @@ class AuditService
         ?array $oldValues = null,
         ?array $newValues = null
     ): void {
-        $userId = is_object($user) ? $user->id : $user;
+        try {
+            $userId = is_object($user) ? $user->id : $user;
 
-        DB::table('audit_logs')->insert([
-            'action' => $action,
-            'user_id' => $userId,
-            'auditable_type' => $auditableType,
-            'auditable_id' => $auditableId,
-            'old_values' => $oldValues ? json_encode($oldValues) : null,
-            'new_values' => $newValues ? json_encode($newValues) : null,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-            'created_at' => now(),
-        ]);
+            DB::table('audit_logs')->insert([
+                'action' => $action,
+                'user_id' => $userId,
+                'auditable_type' => $auditableType,
+                'auditable_id' => $auditableId,
+                'old_values' => $oldValues ? json_encode($oldValues) : null,
+                'new_values' => $newValues ? json_encode($newValues) : null,
+                'ip_address' => Request::ip(),
+                'user_agent' => Request::userAgent(),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            logger()->error('Audit log failed: '.$e->getMessage());
+        }
     }
 
     /**

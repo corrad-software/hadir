@@ -38,7 +38,7 @@ Route::get('/settings', [SettingController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/sync-sso', [UserController::class, 'syncSso']);
     Route::post('/users/{id}/reset-password', [UserController::class, 'resetPassword']);
-    Route::apiResource('users', UserController::class);
+    Route::apiResource('users', UserController::class)->parameters(['users' => 'id']);
     Route::apiResource('roles', RoleController::class);
 
     Route::put('/settings', [SettingController::class, 'update']);

@@ -9,6 +9,7 @@ use App\Http\Traits\ApiResponse;
 use App\Models\Role;
 use App\Models\SsoUser;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -84,13 +85,21 @@ class UserController extends Controller
             return $this->sendError(422, 'EMAIL_EXISTS', 'An account with this email already exists');
         }
 
-        $ssoUser = SsoUser::create([
-            'id'           => (string) Str::uuid(),
-            'email'        => $data['email'],
-            'name'         => $data['name'],
-            'passwordHash' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
-            'role'         => $role,
-        ]);
+        try {
+            $ssoUser = SsoUser::create([
+                'id'           => (string) Str::uuid(),
+                'email'        => $data['email'],
+                'name'         => $data['name'],
+                'passwordHash' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
+                'role'         => $role,
+            ]);
+        } catch (QueryException $e) {
+            return $this->sendError(
+                503,
+                'SSO_DB_ERROR',
+                'Cannot write to SSO database (sso_hadir). Grant INSERT on User table for the DB user, then redeploy.'
+            );
+        }
 
         try {
             $user = User::create([
@@ -101,9 +110,14 @@ class UserController extends Controller
                 'role_id'   => $this->resolveRoleId($role),
                 'is_active' => $data['is_active'] ?? true,
             ]);
-        } catch (\Throwable $e) {
+        } catch (QueryException $e) {
             $ssoUser->delete();
-            throw $e;
+
+            return $this->sendError(
+                503,
+                'DB_WRITE_ERROR',
+                'Cannot write to main database (kedatangan). Check MySQL grants for the application user.'
+            );
         }
 
         return $this->sendCreated($this->formatUser($user));
@@ -129,6 +143,7 @@ class UserController extends Controller
         }
 
         $data = $request->validated();
+        $originalEmail = $user->email;
 
         $updateData = [];
 
@@ -146,12 +161,42 @@ class UserController extends Controller
             $updateData['is_active'] = $data['is_active'];
         }
         if (! empty($data['password'])) {
-            $updateData['password'] = Hash::make($data['password']);
+            $updateData['password'] = $data['password'];
         }
 
-        $user->update($updateData);
+        try {
+            $user->update($updateData);
+        } catch (QueryException $e) {
+            return $this->sendError(
+                503,
+                'DB_WRITE_ERROR',
+                'Cannot update user in database. Check MySQL grants for kedatangan.'
+            );
+        }
 
-        return $this->sendOk($this->formatUser($user));
+        $ssoUser = SsoUser::where('email', $originalEmail)->first();
+        if ($ssoUser) {
+            if (isset($data['name'])) {
+                $ssoUser->name = $data['name'];
+            }
+            if (isset($data['email'])) {
+                $ssoUser->email = $data['email'];
+            }
+            if (isset($data['role'])) {
+                $ssoUser->role = $data['role'];
+            }
+            try {
+                $ssoUser->save();
+            } catch (QueryException $e) {
+                return $this->sendError(
+                    503,
+                    'SSO_DB_ERROR',
+                    'User saved locally but SSO sync failed. Grant UPDATE on sso_hadir.User for the DB user.'
+                );
+            }
+        }
+
+        return $this->sendOk($this->formatUser($user->fresh()));
     }
 
     public function syncSso(): JsonResponse

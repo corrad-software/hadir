@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, ensureCsrfCookie } from "./client";
 import type {
   AppNotification,
   AttendanceCorrection,
@@ -62,10 +62,12 @@ export async function getUser(id: number) {
 }
 
 export async function createUser(input: UserInput) {
+  await ensureCsrfCookie();
   return apiRequest<{ data: UserDetail }>("/api/users", { method: "POST", body: JSON.stringify(input) });
 }
 
 export async function updateUser(id: number, input: UserInput) {
+  await ensureCsrfCookie();
   return apiRequest<{ data: UserDetail }>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify(input) });
 }
 

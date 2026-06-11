@@ -42,7 +42,7 @@ class AuthController extends Controller
             ['email' => $ssoUser->email],
             [
                 'name' => $ssoUser->name,
-                'password' => Hash::make(Str::random(32)),
+                'password' => Str::random(32),
             ]
         );
 
@@ -202,13 +202,18 @@ class AuthController extends Controller
      */
     protected function userPayload($user): array
     {
+        $hasSupervisees = false;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'supervisor_id')) {
+            $hasSupervisees = User::where('supervisor_id', $user->id)->exists();
+        }
+
         return [
             'id'              => $user->id,
             'email'           => $user->email,
             'name'            => $user->name,
             'photo_url'       => $user->photo_url,
             'role'            => $user->role,
-            'has_supervisees' => User::where('supervisor_id', $user->id)->exists(),
+            'has_supervisees' => $hasSupervisees,
         ];
     }
 }
