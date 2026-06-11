@@ -26,8 +26,14 @@ const auth = useAuthStore();
 const toast = useToast();
 const confirmDialog = useConfirmDialog();
 
-const isNew = computed(() => route.params.id === "new");
-const userId = computed(() => (isNew.value ? null : Number(route.params.id)));
+const isNew = computed(
+  () => route.name === "platform-user-create" || route.path.endsWith("/users/new"),
+);
+const userId = computed(() => {
+  if (isNew.value) return null;
+  const id = Number(route.params.id);
+  return Number.isFinite(id) ? id : null;
+});
 const isSelf = computed(() => userId.value !== null && userId.value === auth.user?.id);
 
 const profileForm = ref({ name: "", email: "", role: "admin", isActive: true });
@@ -117,7 +123,7 @@ async function saveProfile() {
         isActive: profileForm.value.isActive,
       });
       toast.success("User created");
-      router.push("/admin/settings/users");
+      router.push("/admin/platform/identity/users");
       return;
     }
 

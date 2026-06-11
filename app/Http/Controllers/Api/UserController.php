@@ -78,17 +78,35 @@ class UserController extends Controller
     public function store(StoreUserRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $role = $data['role'] ?? 'user';
 
-        $user = User::create([
-            'name'      => $data['name'],
-            'email'     => $data['email'],
-            'password'  => Hash::make($data['password']),
-            'role'      => $data['role'] ?? 'admin',
-            'role_id'   => $this->resolveRoleId($data['role'] ?? null),
-            'is_active' => $data['is_active'] ?? true,
+        if (SsoUser::where('email', $data['email'])->exists()) {
+            return $this->sendError(422, 'EMAIL_EXISTS', 'An account with this email already exists');
+        }
+
+        $ssoUser = SsoUser::create([
+            'id'           => (string) Str::uuid(),
+            'email'        => $data['email'],
+            'name'         => $data['name'],
+            'passwordHash' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
+            'role'         => $role,
         ]);
 
-        return $this->sendOk($this->formatUser($user));
+        try {
+            $user = User::create([
+                'name'      => $data['name'],
+                'email'     => $data['email'],
+                'password'  => $data['password'],
+                'role'      => $role,
+                'role_id'   => $this->resolveRoleId($role),
+                'is_active' => $data['is_active'] ?? true,
+            ]);
+        } catch (\Throwable $e) {
+            $ssoUser->delete();
+            throw $e;
+        }
+
+        return $this->sendCreated($this->formatUser($user));
     }
 
     public function show(int $id): JsonResponse
