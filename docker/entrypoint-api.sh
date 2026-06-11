@@ -34,8 +34,19 @@ fi
 
 php artisan storage:link --force 2>/dev/null || true
 
+if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
+    php /var/www/html/docker/mysql/bootstrap-grants.php
+fi
+
 if [ "$RUN_MIGRATIONS" = "true" ]; then
-    php artisan migrate --force
+    if ! php artisan migrate --force; then
+        echo ""
+        echo "Migration failed. If you see 'Access denied' for database kedatangan/sso_hadir:"
+        echo "  1. Add MYSQL_ROOT_PASSWORD (Coolify MySQL root password) to env and redeploy, OR"
+        echo "  2. Run docker/mysql/grant-schemas.sql as MySQL root (Workbench / Coolify terminal)"
+        echo ""
+        exit 1
+    fi
 fi
 
 if [ "$RUN_SEED" = "true" ]; then
