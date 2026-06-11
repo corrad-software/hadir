@@ -43,10 +43,21 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
     headers,
   });
 
-  const payload = await response.json();
+  const raw = await response.text();
+  let payload: { data?: T; error?: { message?: string } };
+  try {
+    payload = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(
+      response.ok
+        ? "Invalid JSON response from server"
+        : "API routing error: server returned HTML instead of JSON. Check /api and /sanctum proxy to Laravel.",
+    );
+  }
+
   if (!response.ok) {
     throw new Error(payload?.error?.message || "Request failed");
   }
 
-  return payload;
+  return payload as T;
 }
