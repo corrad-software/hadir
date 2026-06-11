@@ -8,7 +8,7 @@ export type SelectOption = {
 };
 
 const props = withDefaults(defineProps<{
-  modelValue: string | number | null;
+  modelValue?: string | number | null;
   options: SelectOption[];
   placeholder?: string;
   clearable?: boolean;

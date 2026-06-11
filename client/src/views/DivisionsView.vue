@@ -148,11 +148,15 @@ const divisionTree = computed((): DivisionNode[] => {
 const filteredTree = computed((): DivisionNode[] => {
   const q = searchQ.value.toLowerCase().trim();
   if (!q) return divisionTree.value;
-  return divisionTree.value.flatMap((root) => {
+  return divisionTree.value.flatMap((root): DivisionNode[] => {
     const rootMatch = root.name.toLowerCase().includes(q);
     const matchingChildren = root.children.filter((c) => c.name.toLowerCase().includes(q));
-    if (rootMatch) return [{ ...root, children: matchingChildren.length ? matchingChildren : root.children }];
-    if (matchingChildren.length) return [{ ...root, children: matchingChildren }];
+    if (rootMatch) {
+      return [{ ...root, children: matchingChildren.length ? matchingChildren : root.children }];
+    }
+    if (matchingChildren.length) {
+      return [{ ...root, children: matchingChildren }];
+    }
     return [];
   });
 });

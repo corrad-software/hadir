@@ -20,6 +20,11 @@ const total = ref(0);
 const totalPages = ref(0);
 const filterStatus = ref<string | null>(null);
 
+function onFilterStatusChange(value: string | number | null) {
+  filterStatus.value = typeof value === "string" ? value : null;
+  onFilterChange();
+}
+
 const rejectModal = ref<{ open: boolean; id: number | null; note: string }>({ open: false, id: null, note: "" });
 const acting = ref(false);
 
@@ -134,7 +139,7 @@ onMounted(load);
           :model-value="filterStatus"
           :options="statusOptions"
           placeholder="All Statuses"
-          @update:model-value="filterStatus = $event; onFilterChange()"
+          @update:model-value="onFilterStatusChange"
         />
         <span v-if="total > 0" class="text-xs text-slate-400">{{ total }} requests</span>
       </div>
