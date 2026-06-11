@@ -16,7 +16,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 
-RUN apk add --no-cache gettext
+RUN apk add --no-cache gettext bind-tools
 
 COPY docker/nginx/frontend.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/entrypoint-frontend.sh /usr/local/bin/entrypoint-frontend.sh

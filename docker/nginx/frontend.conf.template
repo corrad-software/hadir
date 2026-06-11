@@ -4,9 +4,13 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # Docker embedded DNS — resolve API host at request time (not nginx startup)
+    resolver 127.0.0.11 valid=30s ipv6=off;
+
     # Proxy API traffic to Laravel (same-origin hadir.sena.my)
     location /api/ {
-        proxy_pass ${API_UPSTREAM};
+        set $api_backend "${API_UPSTREAM}";
+        proxy_pass $api_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -16,7 +20,8 @@ server {
     }
 
     location /sanctum/ {
-        proxy_pass ${API_UPSTREAM};
+        set $api_backend "${API_UPSTREAM}";
+        proxy_pass $api_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -26,7 +31,8 @@ server {
     }
 
     location /storage/ {
-        proxy_pass ${API_UPSTREAM};
+        set $api_backend "${API_UPSTREAM}";
+        proxy_pass $api_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -36,7 +42,8 @@ server {
     }
 
     location /up {
-        proxy_pass ${API_UPSTREAM};
+        set $api_backend "${API_UPSTREAM}";
+        proxy_pass $api_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
