@@ -152,10 +152,11 @@ const filteredTree = computed((): DivisionNode[] => {
     const rootMatch = root.name.toLowerCase().includes(q);
     const matchingChildren = root.children.filter((c) => c.name.toLowerCase().includes(q));
     if (rootMatch) {
-      return [{ ...root, children: matchingChildren.length ? matchingChildren : root.children }];
+      const children = matchingChildren.length ? matchingChildren : root.children;
+      return [{ ...root, children }] as DivisionNode[];
     }
     if (matchingChildren.length) {
-      return [{ ...root, children: matchingChildren }];
+      return [{ ...root, children: matchingChildren }] as DivisionNode[];
     }
     return [];
   });
