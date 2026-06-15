@@ -27,7 +27,9 @@ const prefetchingGps = ref(false);
 async function prefetchGps() {
   prefetchingGps.value = true;
   const pos = await getPosition();
-  prefetchedPosition.value = pos;
+  if (!("error" in pos)) {
+    prefetchedPosition.value = pos;
+  }
   prefetchingGps.value = false;
 }
 
@@ -132,7 +134,7 @@ async function openLocationModal(action: "checkin" | "checkout") {
   locationModal.value.latitude = pos.latitude;
   locationModal.value.longitude = pos.longitude;
   locationModal.value.acquiring = false;
-  prefetchedPosition.value = pos;
+  prefetchedPosition.value = { latitude: pos.latitude, longitude: pos.longitude };
 }
 
 function cancelLocationModal() {
