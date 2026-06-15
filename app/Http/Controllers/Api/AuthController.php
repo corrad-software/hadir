@@ -8,12 +8,15 @@ use App\Http\Traits\ApiResponse;
 use App\Models\SsoUser;
 use App\Models\User;
 use App\Services\AuditService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -37,33 +40,47 @@ class AuthController extends Controller
             return $this->sendError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
         }
 
-        // Sync local user from SSO data (name included in create to satisfy NOT NULL)
-        $user = User::firstOrCreate(
-            ['email' => $ssoUser->email],
-            [
-                'name' => $ssoUser->name,
-                'password' => Str::random(32),
-            ]
-        );
+        try {
+            // Sync local user from SSO data (name included in create to satisfy NOT NULL)
+            $user = User::firstOrCreate(
+                ['email' => $ssoUser->email],
+                [
+                    'name' => $ssoUser->name,
+                    'password' => Str::random(32),
+                ]
+            );
 
-        $ssoRole = strtolower($ssoUser->role);
-        $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
-        $user->update([
-            'name'     => $ssoUser->name,
-            'role'     => $ssoRole,
-            'role_id'  => $roleModel?->id,
-            'photo_url' => $ssoUser->avatarUrl ?: null,
-            'is_active' => true,
-        ]);
+            $ssoRole = strtolower($ssoUser->role);
+            $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
+            $user->update([
+                'name'      => $ssoUser->name,
+                'role'      => $ssoRole,
+                'role_id'   => $roleModel?->id,
+                'photo_url' => $ssoUser->avatarUrl ?: null,
+                'is_active' => true,
+            ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+            Auth::login($user);
+            $request->session()->regenerate();
 
-        $this->auditService->logAuth('login', $user);
+            $this->auditService->logAuth('login', $user);
 
-        return $this->sendOk([
-            'user' => $this->userPayload($user),
-        ]);
+            return $this->sendOk([
+                'user' => $this->userPayload($user),
+            ]);
+        } catch (QueryException $e) {
+            logger()->error('Login DB error: '.$e->getMessage());
+
+            return $this->sendError(
+                503,
+                'DB_ERROR',
+                'Database error during login. Run migrations and verify MySQL grants for kedatangan + sso_hadir.'
+            );
+        } catch (Throwable $e) {
+            logger()->error('Login error: '.$e->getMessage());
+
+            return $this->sendError(500, 'LOGIN_ERROR', 'Login failed. Check API logs in Coolify.');
+        }
     }
 
     /**
@@ -203,8 +220,12 @@ class AuthController extends Controller
     protected function userPayload($user): array
     {
         $hasSupervisees = false;
-        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'supervisor_id')) {
-            $hasSupervisees = User::where('supervisor_id', $user->id)->exists();
+        if (Schema::hasColumn('users', 'supervisor_id')) {
+            try {
+                $hasSupervisees = User::where('supervisor_id', $user->id)->exists();
+            } catch (Throwable) {
+                $hasSupervisees = false;
+            }
         }
 
         return [

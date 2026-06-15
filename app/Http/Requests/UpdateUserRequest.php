@@ -19,7 +19,8 @@ class UpdateUserRequest extends BaseFormRequest
      */
     public function rules(): array
     {
-        $userId = $this->route('id') ?? $this->route('user');
+        $rawId = $this->route('id') ?? $this->route('user');
+        $userId = is_numeric($rawId) ? (int) $rawId : 0;
 
         return [
             'name' => 'sometimes|required|string|min:1',

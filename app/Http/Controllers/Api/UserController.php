@@ -136,6 +136,10 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, int $id): JsonResponse
     {
+        if ($id < 1) {
+            return $this->sendError(400, 'INVALID_ID', 'Invalid user id. Use POST /api/users to create a new user.');
+        }
+
         $user = User::find($id);
 
         if (! $user) {

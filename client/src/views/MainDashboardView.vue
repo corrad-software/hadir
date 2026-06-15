@@ -49,13 +49,23 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-async function getPosition(): Promise<{ latitude: number; longitude: number } | null> {
+async function getPosition(): Promise<{ latitude: number; longitude: number } | { error: string }> {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
+    if (!navigator.geolocation) {
+      resolve({ error: "Your browser does not support GPS/location." });
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 8000 }
+      (err) => {
+        const messages: Record<number, string> = {
+          1: "Location permission denied. Click the lock icon in the address bar → Site settings → Allow Location, then reload.",
+          2: "Location unavailable. Try a mobile device or enable location services on your PC.",
+          3: "Location request timed out. Move near a window or try again.",
+        };
+        resolve({ error: messages[err.code] ?? "Could not get GPS location." });
+      },
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
     );
   });
 }
@@ -63,9 +73,9 @@ async function getPosition(): Promise<{ latitude: number; longitude: number } | 
 async function openLocationModal(action: "checkin" | "checkout") {
   locationModal.value = { open: true, action, latitude: null, longitude: null, acquiring: true };
   const pos = await getPosition();
-  if (!pos) {
+  if ("error" in pos) {
     locationModal.value.open = false;
-    toast.error("GPS required", "Allow location access in your browser and try again.");
+    toast.error("GPS required", pos.error);
     return;
   }
   locationModal.value.latitude = pos.latitude;

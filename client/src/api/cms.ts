@@ -67,6 +67,9 @@ export async function createUser(input: UserInput) {
 }
 
 export async function updateUser(id: number, input: UserInput) {
+  if (!Number.isFinite(id) || id < 1) {
+    throw new Error("Invalid user id. Refresh the page and use Create User to add a new account.");
+  }
   await ensureCsrfCookie();
   return apiRequest<{ data: UserDetail }>(`/api/users/${id}`, { method: "PUT", body: JSON.stringify(input) });
 }
@@ -190,6 +193,7 @@ export async function getTeamToday() {
 }
 
 export async function checkIn(payload: CheckInInput) {
+  await ensureCsrfCookie();
   return apiRequest<{ data: AttendanceLog }>("/api/attendance/checkin", {
     method: "POST",
     body: JSON.stringify(payload),
@@ -197,6 +201,7 @@ export async function checkIn(payload: CheckInInput) {
 }
 
 export async function checkOut(payload: CheckInInput) {
+  await ensureCsrfCookie();
   return apiRequest<{ data: AttendanceLog }>("/api/attendance/checkout", {
     method: "POST",
     body: JSON.stringify(payload),
