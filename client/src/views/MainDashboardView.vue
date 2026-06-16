@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { Clock, LogIn, LogOut, CheckCircle2, MapPin, MapPinOff, Navigation, UserCheck, AlertTriangle, MapPinOff as MapPinOffIcon } from "lucide-vue-next";
+import { Clock, LogIn, LogOut, CheckCircle2, MapPin, MapPinOff, UserCheck, AlertTriangle, MapPinOff as MapPinOffIcon } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
+import LocationConfirmModal from "@/components/LocationConfirmModal.vue";
 import { useToast } from "@/composables/useToast";
+import { useGeolocation } from "@/composables/useGeolocation";
 import { useAuthStore } from "@/stores/auth";
 import { getTodayAttendance, checkIn, checkOut, getAttendanceTodayStats } from "@/api/cms";
 import type { AttendanceLog } from "@/types";
 
 const toast = useToast();
 const auth = useAuthStore();
+const geo = useGeolocation();
 
 const todayLog = ref<AttendanceLog | null>(null);
 const loadingAttendance = ref(false);
@@ -23,7 +26,8 @@ const locationModal = ref<{
   latitude: number | null;
   longitude: number | null;
   acquiring: boolean;
-}>({ open: false, action: null, latitude: null, longitude: null, acquiring: false });
+  error: string | null;
+}>({ open: false, action: null, latitude: null, longitude: null, acquiring: false, error: null });
 
 const checkedIn = computed(() => !!todayLog.value?.checkInAt);
 const checkedOut = computed(() => !!todayLog.value?.checkOutAt);
@@ -49,42 +53,62 @@ function formatTime(iso: string | null) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-async function getPosition(): Promise<{ latitude: number; longitude: number } | { error: string }> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve({ error: "Your browser does not support GPS/location." });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      (err) => {
-        const messages: Record<number, string> = {
-          1: "Location permission denied. Click the lock icon in the address bar → Site settings → Allow Location, then reload.",
-          2: "Location unavailable. Try a mobile device or enable location services on your PC.",
-          3: "Location request timed out. Move near a window or try again.",
-        };
-        resolve({ error: messages[err.code] ?? "Could not get GPS location." });
-      },
-      { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 },
-    );
-  });
+async function acquireLocation(forceFresh = false) {
+  const pos = await geo.requestPosition(forceFresh ? { maximumAge: 0 } : undefined);
+  if (!pos.ok) {
+    return { error: pos.error };
+  }
+
+  return { latitude: pos.latitude, longitude: pos.longitude };
 }
 
 async function openLocationModal(action: "checkin" | "checkout") {
-  locationModal.value = { open: true, action, latitude: null, longitude: null, acquiring: true };
-  const pos = await getPosition();
-  if ("error" in pos) {
-    locationModal.value.open = false;
-    toast.error("GPS required", pos.error);
+  locationModal.value = { open: true, action, latitude: null, longitude: null, acquiring: true, error: null };
+
+  if (geo.position.value) {
+    locationModal.value.latitude = geo.position.value.latitude;
+    locationModal.value.longitude = geo.position.value.longitude;
+    locationModal.value.acquiring = false;
     return;
   }
+
+  const pos = await acquireLocation();
+  if ("error" in pos) {
+    locationModal.value.acquiring = false;
+    locationModal.value.error = pos.error;
+    return;
+  }
+
   locationModal.value.latitude = pos.latitude;
   locationModal.value.longitude = pos.longitude;
   locationModal.value.acquiring = false;
 }
 
+async function retryLocation() {
+  locationModal.value.acquiring = true;
+  locationModal.value.error = null;
+
+  const pos = await acquireLocation(true);
+  if ("error" in pos) {
+    locationModal.value.acquiring = false;
+    locationModal.value.error = pos.error;
+    return;
+  }
+
+  locationModal.value.latitude = pos.latitude;
+  locationModal.value.longitude = pos.longitude;
+  locationModal.value.acquiring = false;
+}
+
+async function enableGps() {
+  const pos = await acquireLocation(true);
+  if ("error" in pos) {
+    toast.error("GPS required", pos.error);
+  }
+}
+
 function cancelLocationModal() {
-  locationModal.value = { open: false, action: null, latitude: null, longitude: null, acquiring: false };
+  locationModal.value = { open: false, action: null, latitude: null, longitude: null, acquiring: false, error: null };
 }
 
 async function confirmLocation() {
@@ -140,7 +164,11 @@ const greeting = computed(() => {
 
 const todayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-onMounted(() => { loadAttendance(); loadStats(); });
+onMounted(() => {
+  loadAttendance();
+  loadStats();
+  void geo.prefetch();
+});
 </script>
 
 <template>
@@ -207,7 +235,19 @@ onMounted(() => { loadAttendance(); loadStats(); });
           </div>
 
           <!-- Action buttons -->
-          <div class="ml-auto flex items-center gap-2">
+          <div class="ml-auto flex flex-col items-end gap-2">
+            <div v-if="!geo.isReady && !checkedIn" class="flex items-center gap-2">
+              <span class="text-[11px] text-amber-300">GPS not ready</span>
+              <button
+                type="button"
+                class="rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-[11px] font-medium text-amber-200 hover:bg-amber-400/20"
+                @click="enableGps"
+              >
+                Enable GPS
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
             <div v-if="loadingAttendance" class="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
 
             <template v-else-if="checkedIn && checkedOut">
@@ -237,6 +277,7 @@ onMounted(() => { loadAttendance(); loadStats(); });
                 {{ acting ? "Please wait…" : "Check Out" }}
               </button>
             </template>
+            </div>
           </div>
         </div>
       </article>
@@ -273,55 +314,16 @@ onMounted(() => { loadAttendance(); loadStats(); });
 
     </div>
 
-    <!-- Location Modal -->
-    <Teleport to="body">
-      <div
-        v-if="locationModal.open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-        @click.self="cancelLocationModal"
-      >
-        <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-xl">
-          <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
-            <Navigation class="h-4 w-4 text-blue-600" />
-            <h2 class="text-sm font-semibold text-slate-900">
-              Confirm Location — {{ locationModal.action === "checkin" ? "Check In" : "Check Out" }}
-            </h2>
-          </div>
-
-          <div v-if="locationModal.acquiring" class="flex flex-col items-center gap-3 px-5 py-8 text-center">
-            <div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-            <p class="text-sm text-slate-500">Acquiring your location…</p>
-          </div>
-
-          <div v-else class="space-y-4 px-5 py-5">
-            <p class="text-sm text-slate-600">Your current GPS coordinates will be recorded. Confirm to proceed.</p>
-            <div class="space-y-1 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-medium text-slate-500">Latitude</span>
-                <span class="font-mono text-slate-800">{{ locationModal.latitude?.toFixed(6) }}</span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="font-medium text-slate-500">Longitude</span>
-                <span class="font-mono text-slate-800">{{ locationModal.longitude?.toFixed(6) }}</span>
-              </div>
-            </div>
-            <div class="flex gap-2 pt-1">
-              <button
-                class="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                @click="cancelLocationModal"
-              >
-                Cancel
-              </button>
-              <button
-                class="flex-1 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-                @click="confirmLocation"
-              >
-                {{ locationModal.action === "checkin" ? "Check In" : "Check Out" }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <LocationConfirmModal
+      :open="locationModal.open"
+      :action="locationModal.action"
+      :acquiring="locationModal.acquiring"
+      :latitude="locationModal.latitude"
+      :longitude="locationModal.longitude"
+      :error="locationModal.error"
+      @cancel="cancelLocationModal"
+      @confirm="confirmLocation"
+      @retry="retryLocation"
+    />
   </AdminLayout>
 </template>
