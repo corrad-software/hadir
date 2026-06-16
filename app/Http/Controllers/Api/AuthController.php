@@ -12,7 +12,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -34,53 +33,66 @@ class AuthController extends Controller
         $email = $request->input('email');
         $password = $request->input('password');
 
-        $ssoUser = SsoUser::where('email', $email)->first();
+        try {
+            $ssoUser = SsoUser::where('email', $email)->first();
+        } catch (QueryException $e) {
+            logger()->error('Login SSO DB error: '.$e->getMessage());
 
-        if (! $ssoUser || ! password_verify($password, $ssoUser->passwordHash)) {
+            return $this->sendError(
+                503,
+                'SSO_DB_ERROR',
+                'Cannot reach SSO database. Check SSO_DB_* env vars and grants for testagent.'
+            );
+        }
+
+        if (! $ssoUser || ! password_verify($password, (string) ($ssoUser->passwordHash ?? ''))) {
             return $this->sendError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
         }
 
         try {
-            // Sync local user from SSO data (name included in create to satisfy NOT NULL)
-            $user = User::firstOrCreate(
-                ['email' => $ssoUser->email],
-                [
-                    'name' => $ssoUser->name,
-                    'password' => Str::random(32),
-                ]
-            );
-
-            $ssoRole = strtolower($ssoUser->role);
-            $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
-            $user->update([
-                'name'      => $ssoUser->name,
-                'role'      => $ssoRole,
-                'role_id'   => $roleModel?->id,
-                'photo_url' => $ssoUser->avatarUrl ?: null,
-                'is_active' => true,
-            ]);
-
-            Auth::login($user);
-            $request->session()->regenerate();
-
-            $this->auditService->logAuth('login', $user);
-
-            return $this->sendOk([
-                'user' => $this->userPayload($user),
-            ]);
+            $user = $this->syncLocalUserFromSso($ssoUser);
         } catch (QueryException $e) {
-            logger()->error('Login DB error: '.$e->getMessage());
+            logger()->error('Login user sync error: '.$e->getMessage());
 
             return $this->sendError(
                 503,
-                'DB_ERROR',
-                'Database error during login. Run migrations and verify MySQL grants for kedatangan + sso_hadir.'
+                'DB_SYNC_ERROR',
+                'Could not sync user to kedatangan. Run migrations and verify DB grants on kedatangan.users.'
+            );
+        }
+
+        if (config('session.driver') === 'database' && ! Schema::hasTable(config('session.table', 'sessions'))) {
+            logger()->error('Login: sessions table missing');
+
+            return $this->sendError(
+                503,
+                'SESSION_TABLE_MISSING',
+                'Sessions table missing. Run: php artisan migrate --force on the API service.'
+            );
+        }
+
+        try {
+            Auth::login($user);
+            $request->session()->regenerate();
+        } catch (QueryException $e) {
+            logger()->error('Login session error: '.$e->getMessage());
+
+            return $this->sendError(
+                503,
+                'DB_SESSION_ERROR',
+                'Could not save session. Ensure the sessions table exists and DB user can write to kedatangan.'
             );
         } catch (Throwable $e) {
-            logger()->error('Login error: '.$e->getMessage());
+            logger()->error('Login session error: '.$e->getMessage());
 
-            return $this->sendError(500, 'LOGIN_ERROR', 'Login failed. Check API logs in Coolify.');
+            return $this->sendError(500, 'LOGIN_ERROR', 'Login failed while starting session. Check API logs in Coolify.');
         }
+
+        $this->auditService->logAuth('login', $user);
+
+        return $this->sendOk([
+            'user' => $this->userPayload($user),
+        ]);
     }
 
     /**
@@ -108,17 +120,20 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Keep role in sync with SSO on every session check
-        $ssoUser = SsoUser::where('email', $user->email)->first();
-        if ($ssoUser) {
-            $ssoRole = strtolower($ssoUser->role);
-            if ($ssoRole !== $user->role) {
-                $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
-                $user->update([
-                    'role'    => $ssoRole,
-                    'role_id' => $roleModel?->id,
-                ]);
+        try {
+            $ssoUser = SsoUser::where('email', $user->email)->first();
+            if ($ssoUser) {
+                $ssoRole = $this->normalizeSsoRole($ssoUser->role);
+                if ($ssoRole !== $user->role) {
+                    $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
+                    $user->update([
+                        'role'    => $ssoRole,
+                        'role_id' => $roleModel?->id,
+                    ]);
+                }
             }
+        } catch (Throwable $e) {
+            logger()->warning('SSO role sync on /me failed: '.$e->getMessage());
         }
 
         return $this->sendOk([
@@ -212,6 +227,54 @@ class AuthController extends Controller
         return $this->sendOk([
             'user' => $this->userPayload($user),
         ]);
+    }
+
+    /**
+     * Sync or update the local kedatangan user from SSO profile data.
+     */
+    protected function syncLocalUserFromSso(SsoUser $ssoUser): User
+    {
+        $user = User::firstOrCreate(
+            ['email' => $ssoUser->email],
+            [
+                'name' => $ssoUser->name,
+                'password' => Str::random(32),
+            ]
+        );
+
+        $ssoRole = $this->normalizeSsoRole($ssoUser->role);
+        $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
+
+        $user->update([
+            'name'      => $ssoUser->name,
+            'role'      => $ssoRole,
+            'role_id'   => $roleModel?->id,
+            'photo_url' => $this->normalizePhotoUrl($ssoUser->avatarUrl ?? null),
+            'is_active' => true,
+        ]);
+
+        return $user->fresh();
+    }
+
+    protected function normalizeSsoRole(mixed $role): string
+    {
+        $normalized = strtolower(trim((string) ($role ?? 'user')));
+
+        return $normalized !== '' ? $normalized : 'user';
+    }
+
+    /**
+     * Keep photo_url within varchar(255); skip oversized SSO avatar URLs.
+     */
+    protected function normalizePhotoUrl(mixed $avatarUrl): ?string
+    {
+        if ($avatarUrl === null || $avatarUrl === '') {
+            return null;
+        }
+
+        $value = trim((string) $avatarUrl);
+
+        return strlen($value) <= 255 ? $value : null;
     }
 
     /**
