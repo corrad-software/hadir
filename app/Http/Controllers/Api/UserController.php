@@ -9,6 +9,7 @@ use App\Http\Traits\ApiResponse;
 use App\Models\Role;
 use App\Models\SsoUser;
 use App\Models\User;
+use App\Services\SsoUserSyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ use Illuminate\Support\Str;
 class UserController extends Controller
 {
     use ApiResponse;
+
+    public function __construct(
+        protected SsoUserSyncService $ssoUserSync,
+    ) {}
 
     private function formatUser(User $user): array
     {
@@ -205,48 +210,23 @@ class UserController extends Controller
 
     public function syncSso(): JsonResponse
     {
-        $ssoUsers = SsoUser::all();
-        $created  = 0;
-        $updated  = 0;
+        try {
+            $result = $this->ssoUserSync->syncAll();
+        } catch (QueryException $e) {
+            logger()->error('SSO sync error: '.$e->getMessage());
 
-        // Pre-load all roles to avoid N+1 inside the loop
-        $roles = Role::all()->keyBy('name');
+            return $this->sendError(
+                503,
+                'SSO_DB_ERROR',
+                'Cannot read SSO users from testagent. Check SSO_DB_* env vars and grants.'
+            );
+        } catch (\Throwable $e) {
+            logger()->error('SSO sync error: '.$e->getMessage());
 
-        foreach ($ssoUsers as $ssoUser) {
-            $ssoRole   = strtolower($ssoUser->role);
-            $roleId    = $roles->get($ssoRole)?->id;
-            $photoUrl  = $ssoUser->avatarUrl ?: null;
-
-            $user = User::where('email', $ssoUser->email)->first();
-
-            if (! $user) {
-                User::create([
-                    'name'      => $ssoUser->name,
-                    'email'     => $ssoUser->email,
-                    'password'  => Hash::make(Str::random(32)),
-                    'role'      => $ssoRole,
-                    'role_id'   => $roleId,
-                    'photo_url' => $photoUrl,
-                    'is_active' => true,
-                ]);
-                $created++;
-            } else {
-                $user->update([
-                    'name'      => $ssoUser->name,
-                    'role'      => $ssoRole,
-                    'role_id'   => $roleId,
-                    'photo_url' => $photoUrl,
-                    'is_active' => true,
-                ]);
-                $updated++;
-            }
+            return $this->sendError(500, 'SYNC_ERROR', 'SSO sync failed. Check API logs in Coolify.');
         }
 
-        return $this->sendOk([
-            'created' => $created,
-            'updated' => $updated,
-            'total'   => $created + $updated,
-        ]);
+        return $this->sendOk($result);
     }
 
     public function destroy(Request $request, int $id): JsonResponse

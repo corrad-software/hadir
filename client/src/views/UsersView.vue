@@ -77,8 +77,11 @@ async function syncFromSso() {
   syncing.value = true;
   try {
     const res = await syncUsersFromSso();
-    const { created, updated } = res.data;
-    toast.success(`SSO sync complete — ${created} added, ${updated} updated`);
+    const { created, updated, failed } = res.data;
+    const summary = failed
+      ? `SSO sync complete — ${created} added, ${updated} updated, ${failed} skipped`
+      : `SSO sync complete — ${created} added, ${updated} updated`;
+    toast.success(summary);
     page.value = 1;
     await load();
   } catch (e) {

@@ -8,13 +8,13 @@ use App\Http\Traits\ApiResponse;
 use App\Models\SsoUser;
 use App\Models\User;
 use App\Services\AuditService;
+use App\Services\SsoUserSyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Throwable;
 
 class AuthController extends Controller
@@ -23,6 +23,7 @@ class AuthController extends Controller
 
     public function __construct(
         protected AuditService $auditService,
+        protected SsoUserSyncService $ssoUserSync,
     ) {}
 
     /**
@@ -50,7 +51,7 @@ class AuthController extends Controller
         }
 
         try {
-            $user = $this->syncLocalUserFromSso($ssoUser);
+            $user = $this->ssoUserSync->syncUser($ssoUser)['user'];
         } catch (QueryException $e) {
             logger()->error('Login user sync error: '.$e->getMessage());
 
@@ -123,7 +124,7 @@ class AuthController extends Controller
         try {
             $ssoUser = SsoUser::where('email', $user->email)->first();
             if ($ssoUser) {
-                $ssoRole = $this->normalizeSsoRole($ssoUser->role);
+                $ssoRole = $this->ssoUserSync->normalizeRole($ssoUser->role);
                 if ($ssoRole !== $user->role) {
                     $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
                     $user->update([
@@ -227,54 +228,6 @@ class AuthController extends Controller
         return $this->sendOk([
             'user' => $this->userPayload($user),
         ]);
-    }
-
-    /**
-     * Sync or update the local kedatangan user from SSO profile data.
-     */
-    protected function syncLocalUserFromSso(SsoUser $ssoUser): User
-    {
-        $user = User::firstOrCreate(
-            ['email' => $ssoUser->email],
-            [
-                'name' => $ssoUser->name,
-                'password' => Str::random(32),
-            ]
-        );
-
-        $ssoRole = $this->normalizeSsoRole($ssoUser->role);
-        $roleModel = \App\Models\Role::where('name', $ssoRole)->first();
-
-        $user->update([
-            'name'      => $ssoUser->name,
-            'role'      => $ssoRole,
-            'role_id'   => $roleModel?->id,
-            'photo_url' => $this->normalizePhotoUrl($ssoUser->avatarUrl ?? null),
-            'is_active' => true,
-        ]);
-
-        return $user->fresh();
-    }
-
-    protected function normalizeSsoRole(mixed $role): string
-    {
-        $normalized = strtolower(trim((string) ($role ?? 'user')));
-
-        return $normalized !== '' ? $normalized : 'user';
-    }
-
-    /**
-     * Keep photo_url within varchar(255); skip oversized SSO avatar URLs.
-     */
-    protected function normalizePhotoUrl(mixed $avatarUrl): ?string
-    {
-        if ($avatarUrl === null || $avatarUrl === '') {
-            return null;
-        }
-
-        $value = trim((string) $avatarUrl);
-
-        return strlen($value) <= 255 ? $value : null;
     }
 
     /**

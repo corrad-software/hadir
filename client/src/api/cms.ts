@@ -79,7 +79,7 @@ export async function deleteUser(id: number) {
 }
 
 export async function syncUsersFromSso() {
-  return apiRequest<{ data: { created: number; updated: number; total: number } }>("/api/users/sync-sso", { method: "POST" });
+  return apiRequest<{ data: { created: number; updated: number; failed: number; total: number } }>("/api/users/sync-sso", { method: "POST" });
 }
 
 export async function resetUserPassword(id: number, password: string, passwordConfirmation: string) {
