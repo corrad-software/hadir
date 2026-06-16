@@ -75,7 +75,7 @@ async function openLocationModal(action: "checkin" | "checkout") {
   const pos = await acquireLocation();
   if ("error" in pos) {
     locationModal.value.acquiring = false;
-    locationModal.value.error = pos.error;
+    locationModal.value.error = pos.error ?? "Could not get GPS location.";
     return;
   }
 
@@ -91,7 +91,7 @@ async function retryLocation() {
   const pos = await acquireLocation(true);
   if ("error" in pos) {
     locationModal.value.acquiring = false;
-    locationModal.value.error = pos.error;
+    locationModal.value.error = pos.error ?? "Could not get GPS location.";
     return;
   }
 
@@ -103,7 +103,7 @@ async function retryLocation() {
 async function enableGps() {
   const pos = await acquireLocation(true);
   if ("error" in pos) {
-    toast.error("GPS required", pos.error);
+    toast.error("GPS required", pos.error ?? "Could not get GPS location.");
   }
 }
 
